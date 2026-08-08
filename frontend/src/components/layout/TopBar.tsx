@@ -1,8 +1,7 @@
-// TopBar - branding + live indicator + confidence badge
+// TopBar — system status bar: branding + fault state + belief update time
 
 import { useGrid } from '../../context/GridContext';
 import { StatusDot } from '../shared/StatusDot';
-import { AnimatedNumber } from '../shared/AnimatedNumber';
 import { useEffect, useState } from 'react';
 
 export function TopBar() {
@@ -22,67 +21,73 @@ export function TopBar() {
   });
 
   const viewLabels: Record<string, string> = {
-    dashboard: 'Fault Dashboard',
-    evidence: 'Evidence Stream',
+    dashboard: 'Overview',
+    evidence: 'Evidence',
     crew: 'Crew Dispatch',
-    analysis: 'Cause Analysis',
+    analysis: 'Causes',
   };
 
   return (
     <header
-      className="fixed top-0 left-16 right-0 h-14 flex items-center justify-between px-6 z-30"
+      className="fixed top-0 left-[52px] right-0 h-10 flex items-center justify-between px-4 z-30"
       style={{
-        backgroundColor: 'rgba(8, 11, 20, 0.9)',
-        borderBottom: '1px solid rgba(30, 58, 95, 0.3)',
-        backdropFilter: 'blur(12px)',
+        backgroundColor: '#0d1117',
+        borderBottom: '1px solid var(--gs-border)',
       }}
     >
       {/* Left: branding + view name */}
-      <div className="flex items-center gap-4">
-        <h1 className="text-sm font-semibold tracking-wide" style={{ color: '#06b6d4' }}>
-          GRIDMIND
-          <span className="text-slate-500 font-normal ml-1.5">AI</span>
-        </h1>
-        <span className="text-slate-600 text-xs">/</span>
-        <span className="text-slate-400 text-sm font-medium">
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-semibold tracking-wide" style={{ color: 'var(--gs-text)' }}>
+          GRIDSENSE
+        </span>
+        <span style={{ color: 'var(--gs-text-tertiary)', fontSize: 10 }}>/</span>
+        <span className="text-xs font-medium" style={{ color: 'var(--gs-text-secondary)' }}>
           {viewLabels[state.activeView]}
         </span>
       </div>
 
-      {/* Right: live status + time + confidence */}
-      <div className="flex items-center gap-5">
+      {/* Right: operational status */}
+      <div className="flex items-center gap-4">
         {/* Active fault indicator */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.15)' }}
-        >
-          <StatusDot status="affected" size="sm" />
-          <span className="text-xs font-medium text-red-400">ACTIVE FAULT</span>
+        <div className="flex items-center gap-1.5">
+          <StatusDot status="affected" size="sm" pulse />
+          <span className="text-[11px] font-medium" style={{ color: 'var(--gs-red)' }}>
+            ACTIVE FAULT
+          </span>
         </div>
+
+        {/* Separator */}
+        <span style={{ color: 'var(--gs-border)', fontSize: 11 }}>|</span>
 
         {/* Live indicator */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <StatusDot status="powered" size="sm" />
-          <span className="text-xs text-slate-500 uppercase tracking-wider">Live</span>
+          <span className="text-[11px]" style={{ color: 'var(--gs-text-tertiary)' }}>LIVE</span>
         </div>
+
+        {/* Separator */}
+        <span style={{ color: 'var(--gs-border)', fontSize: 11 }}>|</span>
+
+        {/* Belief update status */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+            BELIEF UPDATED
+          </span>
+          <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--gs-text-secondary)' }}>
+            {state.lastBeliefUpdate}
+          </span>
+          <span className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+            · {state.evidenceCount} updates
+          </span>
+        </div>
+
+        {/* Separator */}
+        <span style={{ color: 'var(--gs-border)', fontSize: 11 }}>|</span>
 
         {/* Clock */}
-        <span className="font-mono text-xs text-slate-500 tabular-nums">
+        <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--gs-text-tertiary)' }}>
           {formattedTime}
         </span>
-
-        {/* Confidence badge */}
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md"
-          style={{ backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.15)' }}
-        >
-          <span className="text-[10px] uppercase tracking-wider text-slate-500">Confidence</span>
-          <AnimatedNumber
-            value={state.fault.confidence * 100}
-            suffix="%"
-            decimals={0}
-            className="text-sm font-bold text-emerald-400"
-          />
-        </div>
       </div>
     </header>
   );

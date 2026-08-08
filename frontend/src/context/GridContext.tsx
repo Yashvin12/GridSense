@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// GridMind AI  -  Global State (React Context + useReducer)
+// GridSense — Global State (React Context + useReducer)
 // Single source of truth for fault data, probabilities, telemetry, crew plan.
 // All components subscribe here; crew actions dispatch updates globally.
 // ---------------------------------------------------------------------------
@@ -55,6 +55,8 @@ export interface GridState {
   feederNodes: FeederNode[];
   feederEdges: FeederEdge[];
   activeView: 'dashboard' | 'evidence' | 'crew' | 'analysis';
+  lastBeliefUpdate: string;
+  evidenceCount: number;
 }
 
 // ---- Actions ----
@@ -72,6 +74,8 @@ function gridReducer(state: GridState, action: GridAction): GridState {
       const newCauses = updateCausesOnConfirm(state.causes);
       const topProb = Math.max(...newProbs.map((p) => p.probability));
       const event = createCrewEvidenceEvent(action.stopName, true);
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
       return {
         ...state,
         sectionProbabilities: newProbs,
@@ -81,7 +85,9 @@ function gridReducer(state: GridState, action: GridAction): GridState {
           s.stop === action.stopName ? { ...s, status: 'fault_found' as const } : s
         ),
         evidenceLog: [event, ...state.evidenceLog],
-        beliefHistory: [...state.beliefHistory, createBeliefSnapshot(newProbs)],
+        beliefHistory: [...state.beliefHistory, createBeliefSnapshot(newProbs, `Crew: fault at ${action.stopName}`)],
+        lastBeliefUpdate: timeStr,
+        evidenceCount: state.evidenceCount + 1,
       };
     }
 
@@ -90,6 +96,8 @@ function gridReducer(state: GridState, action: GridAction): GridState {
       const newCauses = updateCausesOnDeny(state.causes);
       const topProb = Math.max(...newProbs.map((p) => p.probability));
       const event = createCrewEvidenceEvent(action.stopName, false);
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
       return {
         ...state,
         sectionProbabilities: newProbs,
@@ -99,7 +107,9 @@ function gridReducer(state: GridState, action: GridAction): GridState {
           s.stop === action.stopName ? { ...s, status: 'no_fault' as const } : s
         ),
         evidenceLog: [event, ...state.evidenceLog],
-        beliefHistory: [...state.beliefHistory, createBeliefSnapshot(newProbs)],
+        beliefHistory: [...state.beliefHistory, createBeliefSnapshot(newProbs, `Crew: clear at ${action.stopName}`)],
+        lastBeliefUpdate: timeStr,
+        evidenceCount: state.evidenceCount + 1,
       };
     }
 
@@ -132,6 +142,8 @@ const initialState: GridState = {
   feederNodes,
   feederEdges,
   activeView: 'dashboard',
+  lastBeliefUpdate: '14:26:38',
+  evidenceCount: 8,
 };
 
 // ---- Context ----

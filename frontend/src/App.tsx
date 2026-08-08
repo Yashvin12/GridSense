@@ -1,4 +1,4 @@
-// GridMind AI - Main Application Shell
+// GridSense — Main Application Shell
 
 import { GridProvider, useGrid } from './context/GridContext';
 import { Sidebar } from './components/layout/Sidebar';
@@ -19,11 +19,19 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#080b14' }}>
+    <div className="h-screen" style={{ backgroundColor: 'var(--gs-bg)' }}>
       <Sidebar />
       <TopBar />
-      <main className="ml-16 pt-14 p-3 h-screen" style={{ paddingTop: 'calc(3.5rem + 0.75rem)' }}>
-        <div className="h-[calc(100vh-4.25rem)]">
+      <main
+        className="h-screen"
+        style={{
+          marginLeft: 52,
+          paddingTop: 40,
+          padding: '40px 6px 6px 6px',
+          marginTop: 0,
+        }}
+      >
+        <div style={{ height: 'calc(100vh - 46px)' }}>
           {viewComponents[state.activeView]}
         </div>
       </main>

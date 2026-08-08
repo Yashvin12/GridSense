@@ -1,5 +1,5 @@
-// StatusDot - pulsing status indicator
-// green (powered), red (affected/fault), amber (warning)
+// StatusDot - solid status indicator with optional pulse for active faults
+// Shapes communicate meaning beyond color for accessibility
 
 interface StatusDotProps {
   status: 'powered' | 'affected' | 'warning' | 'offline';
@@ -9,39 +9,38 @@ interface StatusDotProps {
 }
 
 const colorMap = {
-  powered: { bg: '#10b981', glow: 'rgba(16,185,129,0.4)' },
-  affected: { bg: '#ef4444', glow: 'rgba(239,68,68,0.4)' },
-  warning: { bg: '#f59e0b', glow: 'rgba(245,158,11,0.4)' },
-  offline: { bg: '#64748b', glow: 'rgba(100,116,139,0.2)' },
+  powered: '#3fb950',
+  affected: '#f85149',
+  warning: '#d29922',
+  offline: '#6e7681',
 };
 
-const sizeMap = { sm: 8, md: 10, lg: 14 };
+const sizeMap = { sm: 7, md: 9, lg: 12 };
 
 export function StatusDot({
   status,
   size = 'md',
-  pulse = true,
+  pulse = false,
   className = '',
 }: StatusDotProps) {
-  const { bg, glow } = colorMap[status];
+  const bg = colorMap[status];
   const px = sizeMap[size];
 
   return (
     <span
-      className={`relative inline-block rounded-full ${className}`}
+      className={`relative inline-block rounded-full shrink-0 ${className}`}
       style={{
         width: px,
         height: px,
         backgroundColor: bg,
-        boxShadow: `0 0 ${px}px ${glow}`,
       }}
     >
-      {pulse && (status === 'affected' || status === 'warning') && (
+      {pulse && status === 'affected' && (
         <span
           className="absolute inset-0 rounded-full animate-ping"
           style={{
             backgroundColor: bg,
-            opacity: 0.4,
+            opacity: 0.35,
           }}
         />
       )}

@@ -1,149 +1,198 @@
-// InspectionStops - ordered crew stops with confirm/deny buttons
-// This is the core demo interaction: clicking updates probabilities globally
+// InspectionStops — crew dispatch with posterior probability, reasoning,
+// large action buttons (Fitts's Law), and belief update feedback
 
 import { useGrid } from '../../context/GridContext';
 import { StatusDot } from '../shared/StatusDot';
+import { AnimatedNumber } from '../shared/AnimatedNumber';
+import { useState } from 'react';
 
 export function InspectionStops() {
   const { state, confirmStop, denyStop } = useGrid();
-  const { crewPlan, etaMinutes } = state;
+  const { crewPlan, etaMinutes, sectionProbabilities } = state;
 
-  const statusLabels: Record<string, string> = {
-    pending: 'Awaiting Inspection',
-    inspecting: 'Inspecting',
-    fault_found: 'Fault Confirmed',
-    no_fault: 'Section Clear',
+  // Track previous probabilities for showing belief update delta
+  const [prevProbs, setPrevProbs] = useState<Record<string, number>>({});
+  const [lastAction, setLastAction] = useState<{ stop: string; found: boolean } | null>(null);
+
+  const topSection = [...sectionProbabilities].sort((a, b) => b.probability - a.probability)[0];
+
+  const handleConfirm = (stopName: string) => {
+    const probs: Record<string, number> = {};
+    sectionProbabilities.forEach(sp => { probs[sp.section] = sp.probability; });
+    setPrevProbs(probs);
+    setLastAction({ stop: stopName, found: true });
+    confirmStop(stopName);
   };
 
-  const statusColors: Record<string, string> = {
-    pending: '#64748b',
-    inspecting: '#f59e0b',
-    fault_found: '#ef4444',
-    no_fault: '#10b981',
+  const handleDeny = (stopName: string) => {
+    const probs: Record<string, number> = {};
+    sectionProbabilities.forEach(sp => { probs[sp.section] = sp.probability; });
+    setPrevProbs(probs);
+    setLastAction({ stop: stopName, found: false });
+    denyStop(stopName);
+  };
+
+  const statusLabels: Record<string, string> = {
+    pending: 'Awaiting inspection',
+    inspecting: 'Inspecting',
+    fault_found: 'Fault confirmed',
+    no_fault: 'Section clear',
+  };
+
+  const statusDotMap: Record<string, 'powered' | 'affected' | 'warning' | 'offline'> = {
+    pending: 'offline',
+    inspecting: 'warning',
+    fault_found: 'affected',
+    no_fault: 'powered',
   };
 
   return (
-    <div className="grid-card h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <div className="grid-card-header mb-0">Inspection Route</div>
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-md"
-          style={{ backgroundColor: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.15)' }}
-        >
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider">ETA</span>
-          <span className="text-sm font-mono font-bold text-cyan-400 tabular-nums">{etaMinutes} min</span>
+    <div className="gs-panel h-full flex flex-col">
+      <div className="flex items-center justify-between mb-3">
+        <div className="gs-section-label">Inspection Route</div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>ETA</span>
+          <span className="font-mono text-xs font-semibold tabular-nums" style={{ color: 'var(--gs-text-secondary)' }}>
+            {etaMinutes} min
+          </span>
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
         {crewPlan.map((stop) => {
           const isDone = stop.status === 'fault_found' || stop.status === 'no_fault';
-          const statusColor = statusColors[stop.status];
+
+          // Check if this stop was the last action for showing delta
+          const showDelta = lastAction?.stop === stop.stop && isDone;
+          const prevTopProb = prevProbs['B'] || 0;
+          const currentTopProb = topSection?.probability || 0;
 
           return (
             <div
               key={stop.stop}
-              className="relative rounded-xl p-4 transition-all duration-300"
+              className="p-3"
               style={{
                 backgroundColor: isDone
-                  ? `${statusColor}08`
-                  : 'rgba(255, 255, 255, 0.02)',
-                border: `1px solid ${isDone ? `${statusColor}20` : 'rgba(30, 58, 95, 0.3)'}`,
+                  ? stop.status === 'fault_found' ? 'rgba(248,81,73,0.04)' : 'rgba(63,185,80,0.04)'
+                  : 'var(--gs-surface-2)',
+                border: `1px solid ${isDone
+                  ? stop.status === 'fault_found' ? 'rgba(248,81,73,0.15)' : 'rgba(63,185,80,0.15)'
+                  : 'var(--gs-border)'}`,
+                borderRadius: 3,
               }}
             >
-              {/* Order badge */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <span
-                    className="flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold font-mono"
-                    style={{
-                      backgroundColor: `${statusColor}15`,
-                      color: statusColor,
-                    }}
-                  >
-                    {stop.order}
-                  </span>
-                  <div>
-                    <div className="text-sm font-semibold text-white">{stop.stop}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <StatusDot
-                        status={
-                          stop.status === 'fault_found' ? 'affected' :
-                          stop.status === 'no_fault' ? 'powered' :
-                          'offline'
-                        }
-                        size="sm"
-                        pulse={!isDone}
-                      />
-                      <span className="text-[10px] font-mono uppercase tracking-wider" style={{ color: statusColor }}>
-                        {statusLabels[stop.status]}
-                      </span>
-                    </div>
+              {/* Header: order + name + status */}
+              <div className="flex items-start gap-3 mb-2">
+                <span
+                  className="flex items-center justify-center w-7 h-7 text-xs font-bold font-mono shrink-0"
+                  style={{
+                    backgroundColor: 'var(--gs-surface-3)',
+                    borderRadius: 2,
+                    color: isDone
+                      ? stop.status === 'fault_found' ? 'var(--gs-red)' : 'var(--gs-green)'
+                      : 'var(--gs-text-secondary)',
+                  }}
+                >
+                  {stop.order}
+                </span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-[var(--gs-text)]">{stop.stop}</span>
+                    <span className="font-mono text-sm font-bold tabular-nums" style={{ color: 'var(--gs-amber)' }}>
+                      <AnimatedNumber value={stop.probability * 100} suffix="%" decimals={0} className="text-sm font-bold" />
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <StatusDot status={statusDotMap[stop.status]} size="sm" pulse={!isDone} />
+                    <span className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+                      {statusLabels[stop.status]}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Reasoning */}
-              <div className="text-xs text-slate-500 mb-3 pl-11">
-                {stop.order === 1 && 'Highest posterior probability. Start here.'}
-                {stop.order === 2 && 'Adjacent to primary suspect. Check if damage extends.'}
-                {stop.order === 3 && 'Lower probability but within fault zone. Verify last.'}
-              </div>
-
-              {/* Action buttons */}
               {!isDone && (
-                <div className="flex items-center gap-2 pl-11">
+                <div className="mb-3 ml-10">
+                  <div className="text-[10px] font-medium mb-1" style={{ color: 'var(--gs-text-tertiary)' }}>
+                    WHY {stop.order === 1 ? 'FIRST' : stop.order === 2 ? 'SECOND' : 'THIRD'}?
+                  </div>
+                  <div className="space-y-0.5">
+                    {stop.reasoning.map((reason, ri) => (
+                      <div key={ri} className="text-[11px] flex items-start gap-1.5"
+                        style={{ color: 'var(--gs-text-secondary)' }}
+                      >
+                        <span style={{ color: 'var(--gs-text-tertiary)' }}>·</span>
+                        {reason}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons — large hit targets (Fitts's Law) */}
+              {!isDone && (
+                <div className="flex items-center gap-2 ml-10">
                   <button
-                    onClick={() => confirmStop(stop.stop)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer"
+                    onClick={() => handleConfirm(stop.stop)}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold transition-colors duration-150 cursor-pointer flex-1"
                     style={{
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid rgba(239, 68, 68, 0.2)',
-                      color: '#ef4444',
+                      backgroundColor: 'rgba(248, 81, 73, 0.1)',
+                      border: '1px solid rgba(248, 81, 73, 0.25)',
+                      color: '#f85149',
+                      borderRadius: 3,
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                      e.currentTarget.style.backgroundColor = 'rgba(248, 81, 73, 0.2)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                      e.currentTarget.style.backgroundColor = 'rgba(248, 81, 73, 0.1)';
                     }}
                     aria-label={`Confirm fault found at ${stop.stop}`}
                   >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M6 2v4M6 10h.01" />
-                    </svg>
-                    Fault Found
+                    <span>●</span>
+                    FAULT FOUND
                   </button>
 
                   <button
-                    onClick={() => denyStop(stop.stop)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer"
+                    onClick={() => handleDeny(stop.stop)}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold transition-colors duration-150 cursor-pointer flex-1"
                     style={{
-                      backgroundColor: 'rgba(100, 116, 139, 0.08)',
-                      border: '1px solid rgba(100, 116, 139, 0.2)',
-                      color: '#94a3b8',
+                      backgroundColor: 'rgba(110, 118, 129, 0.08)',
+                      border: '1px solid rgba(110, 118, 129, 0.25)',
+                      color: 'var(--gs-text-secondary)',
+                      borderRadius: 3,
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(100, 116, 139, 0.15)';
+                      e.currentTarget.style.backgroundColor = 'rgba(110, 118, 129, 0.15)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(100, 116, 139, 0.08)';
+                      e.currentTarget.style.backgroundColor = 'rgba(110, 118, 129, 0.08)';
                     }}
                     aria-label={`Report no fault at ${stop.stop}`}
                   >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M2 6l3 3 5-5" />
-                    </svg>
-                    No Fault
+                    <span>✓</span>
+                    NO FAULT
                   </button>
                 </div>
               )}
 
-              {/* Done state feedback */}
+              {/* Done state: belief update feedback */}
               {isDone && (
-                <div className="pl-11 text-xs font-medium" style={{ color: statusColor }}>
-                  {stop.status === 'fault_found'
-                    ? 'Fault confirmed. Probabilities updated across the network.'
-                    : 'Section cleared. Probability redistributed to remaining suspects.'}
+                <div className="ml-10">
+                  <div className="text-[11px] font-medium mb-1"
+                    style={{ color: stop.status === 'fault_found' ? 'var(--gs-red)' : 'var(--gs-green)' }}
+                  >
+                    CREW FEEDBACK RECEIVED
+                  </div>
+                  <div className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+                    → Bayesian belief updated
+                  </div>
+                  {showDelta && prevTopProb > 0 && (
+                    <div className="text-[11px] font-mono mt-1" style={{ color: 'var(--gs-text-secondary)' }}>
+                      Section B: {Math.round(prevTopProb * 100)}% → {Math.round(currentTopProb * 100)}%
+                    </div>
+                  )}
                 </div>
               )}
             </div>

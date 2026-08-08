@@ -1,4 +1,4 @@
-// CrewView - inspection stops + mini route map
+// CrewView — inspection stops (left, dominant) + belief chart (right-top) + map (right-bottom)
 
 import { InspectionStops } from '../components/crew/InspectionStops';
 import { FeederMap } from '../components/map/FeederMap';
@@ -6,20 +6,18 @@ import { BeliefChart } from '../components/evidence/BeliefChart';
 
 export function CrewView() {
   return (
-    <div className="h-full grid grid-cols-[1fr_1fr] grid-rows-[1fr_280px] gap-3">
-      {/* Inspection stops - left column, full height */}
-      <div className="row-span-2">
+    <div className="h-full flex gap-1.5" style={{ minHeight: 0 }}>
+      {/* Left: inspection stops — primary */}
+      <div style={{ flex: '1 1 50%', minWidth: 0 }}>
         <InspectionStops />
       </div>
 
-      {/* Belief chart - top right (shows the live update when crew confirms) */}
-      <div className="row-span-1">
-        <BeliefChart />
-      </div>
-
-      {/* Mini map - bottom right */}
-      <div className="row-span-1">
-        <div className="grid-card h-full p-0 overflow-hidden">
+      {/* Right column: belief chart + map */}
+      <div className="flex flex-col gap-1.5" style={{ flex: '1 1 50%', minWidth: 0 }}>
+        <div style={{ flex: '1 1 55%', minHeight: 0 }}>
+          <BeliefChart compact />
+        </div>
+        <div style={{ flex: '1 1 45%', minHeight: 0 }}>
           <FeederMap compact />
         </div>
       </div>

@@ -1,7 +1,6 @@
 // ---------------------------------------------------------------------------
-// GridMind AI  -  Mock Data Layer
-// Matches the FastAPI contract from Section 6 of the spec.
-// Coordinates placed near Pune, Maharashtra for realistic demo.
+// GridSense — Mock Data Layer
+// Matches the FastAPI contract. Coordinates near Pune, Maharashtra.
 // ---------------------------------------------------------------------------
 
 export interface FaultData {
@@ -14,8 +13,35 @@ export interface CauseEntry {
   probability: number;
 }
 
+// Supporting evidence for cause analysis
+export interface CauseEvidence {
+  description: string;
+  contribution: number; // percentage points contributed
+}
+
+export const causeEvidenceMap: Record<string, CauseEvidence[]> = {
+  'Vegetation Contact': [
+    { description: 'High wind near Pole 43–46', contribution: 18 },
+    { description: 'Fault topology matches vegetation pattern', contribution: 11 },
+    { description: 'Voltage collapse pattern at DTR-2', contribution: 7 },
+    { description: 'Consumer outage reports from Kolvan', contribution: 4 },
+  ],
+  'Transformer Overload': [
+    { description: 'DTR-2 temperature spike to 89°C', contribution: 8 },
+    { description: 'Load pattern prior to fault', contribution: 4 },
+  ],
+  'Broken Conductor': [
+    { description: 'Current near zero on Section B', contribution: 5 },
+    { description: 'Wind event raises conductor stress', contribution: 3 },
+  ],
+  'Illegal Tapping': [
+    { description: 'No supporting evidence', contribution: 0 },
+  ],
+};
+
 export interface SwitchingStep {
   action: string;
+  status: 'recommended' | 'pending' | 'completed' | 'blocked';
 }
 
 export interface CrewStop {
@@ -24,6 +50,8 @@ export interface CrewStop {
   status: 'pending' | 'inspecting' | 'fault_found' | 'no_fault';
   lat: number;
   lng: number;
+  probability: number;
+  reasoning: string[];
 }
 
 export interface SectionProbability {
@@ -43,12 +71,18 @@ export interface EvidenceEvent {
   id: string;
   timestamp: string;
   type: 'sensor' | 'meter' | 'crew' | 'weather' | 'complaint';
-  message: string;
+  title: string;
+  location: string;
+  evidenceCategory: 'location' | 'cause';
+  strength: 'very_strong' | 'strong' | 'moderate' | 'weak';
+  impact: string;
+  detail: string;
 }
 
 export interface BeliefSnapshot {
   timestamp: string;
   sections: Record<string, number>;
+  trigger?: string; // what evidence caused this snapshot
 }
 
 // Feeder topology nodes for the map
@@ -127,15 +161,15 @@ export const feederEdges: FeederEdge[] = [
 
 // Section color mapping based on probability
 export function getSectionColor(probability: number): string {
-  if (probability > 0.7) return '#ef4444';     // red - high fault probability
-  if (probability > 0.3) return '#f59e0b';     // amber - medium
-  if (probability > 0.1) return '#eab308';     // yellow - low-medium
-  return '#10b981';                             // emerald - healthy
+  if (probability > 0.7) return '#f85149';     // red - high fault probability
+  if (probability > 0.3) return '#d29922';     // amber - medium
+  if (probability > 0.1) return '#d29922';     // amber - low-medium
+  return '#3fb950';                             // green - healthy
 }
 
 // Initial fault data
 export const initialFaultData: FaultData = {
-  section: 'Pole 42-46',
+  section: 'Pole 42–46',
   confidence: 0.91,
 };
 
@@ -150,15 +184,38 @@ export const affectedVillages = ['Kolvan', 'Bhira'];
 export const poweredVillages = ['Tamhini'];
 
 export const switchingPlan: SwitchingStep[] = [
-  { action: 'Open Switch S2' },
-  { action: 'Close Tie Switch T4' },
-  { action: 'Restore Bhira immediately' },
+  { action: 'Open Switch S2', status: 'recommended' },
+  { action: 'Close Tie Switch T4', status: 'recommended' },
+  { action: 'Restore Bhira', status: 'pending' },
 ];
 
 export const initialCrewPlan: CrewStop[] = [
-  { stop: 'Pole 44', order: 1, status: 'pending', lat: 18.4995, lng: 73.4865 },
-  { stop: 'Pole 45', order: 2, status: 'pending', lat: 18.4970, lng: 73.4900 },
-  { stop: 'Pole 43', order: 3, status: 'pending', lat: 18.5020, lng: 73.4830 },
+  {
+    stop: 'Pole 44', order: 1, status: 'pending',
+    lat: 18.4995, lng: 73.4865, probability: 0.91,
+    reasoning: [
+      'Highest posterior probability',
+      'Adjacent outage evidence',
+      'Current collapse nearby',
+      'Wind event near section',
+    ],
+  },
+  {
+    stop: 'Pole 45', order: 2, status: 'pending',
+    lat: 18.4970, lng: 73.4900, probability: 0.67,
+    reasoning: [
+      'Adjacent to primary suspect',
+      'Check if damage extends downstream',
+    ],
+  },
+  {
+    stop: 'Pole 43', order: 3, status: 'pending',
+    lat: 18.5020, lng: 73.4830, probability: 0.34,
+    reasoning: [
+      'Lower probability but within fault zone',
+      'Verify upstream boundary',
+    ],
+  },
 ];
 
 export const initialSectionProbabilities: SectionProbability[] = [
@@ -194,17 +251,85 @@ function generateTelemetryHistory(): TelemetryPoint[] {
 
 export const initialTelemetryHistory = generateTelemetryHistory();
 
-// Evidence log
+// Evidence log — enriched with structured fields
 export const initialEvidenceLog: EvidenceEvent[] = [
-  { id: 'e1', timestamp: '14:22:15', type: 'sensor', message: 'Overcurrent relay tripped at Mulshi Substation' },
-  { id: 'e2', timestamp: '14:22:18', type: 'meter', message: 'Last-gasp signal from 14 meters in Kolvan' },
-  { id: 'e3', timestamp: '14:22:20', type: 'meter', message: 'Last-gasp signal from 8 meters in Bhira' },
-  { id: 'e4', timestamp: '14:23:01', type: 'sensor', message: 'Voltage collapse detected at DTR-2 (63kVA)' },
-  { id: 'e5', timestamp: '14:23:45', type: 'weather', message: 'High wind alert: 47 km/h gusts near Pole 43-46' },
-  { id: 'e6', timestamp: '14:24:12', type: 'complaint', message: '3 consumer complaints received from Kolvan' },
-  { id: 'e7', timestamp: '14:25:00', type: 'sensor', message: 'Transformer temp spike: DTR-2 reading 89 deg C' },
-  { id: 'e8', timestamp: '14:26:30', type: 'sensor', message: 'Current reading near zero on Section B feeders' },
+  {
+    id: 'e1', timestamp: '14:22:15', type: 'sensor',
+    title: 'Overcurrent Relay Tripped',
+    location: 'Mulshi Substation',
+    evidenceCategory: 'location', strength: 'very_strong',
+    impact: 'Section B +18%',
+    detail: 'Relay trip indicates fault downstream of substation',
+  },
+  {
+    id: 'e2', timestamp: '14:22:18', type: 'meter',
+    title: 'Last-Gasp Signals Received',
+    location: 'Kolvan (14 meters)',
+    evidenceCategory: 'location', strength: 'strong',
+    impact: 'Section B +7%',
+    detail: 'Supports downstream fault affecting Kolvan supply',
+  },
+  {
+    id: 'e3', timestamp: '14:22:20', type: 'meter',
+    title: 'Last-Gasp Signals Received',
+    location: 'Bhira (8 meters)',
+    evidenceCategory: 'location', strength: 'moderate',
+    impact: 'Section C +3%',
+    detail: 'Downstream propagation from fault in B or C',
+  },
+  {
+    id: 'e4', timestamp: '14:23:01', type: 'sensor',
+    title: 'Voltage Collapse Detected',
+    location: 'DTR-2 (63kVA)',
+    evidenceCategory: 'location', strength: 'strong',
+    impact: 'Section B +9%',
+    detail: 'Matches Section B topology — fault likely upstream of DTR-2',
+  },
+  {
+    id: 'e5', timestamp: '14:23:45', type: 'weather',
+    title: 'High Wind Detected',
+    location: 'Pole 43–46',
+    evidenceCategory: 'cause', strength: 'strong',
+    impact: 'Vegetation contact +12%',
+    detail: '47 km/h gusts raise vegetation-contact probability',
+  },
+  {
+    id: 'e6', timestamp: '14:24:12', type: 'complaint',
+    title: 'Consumer Complaints',
+    location: 'Kolvan (3 reports)',
+    evidenceCategory: 'location', strength: 'moderate',
+    impact: 'Section B +4%',
+    detail: 'Outage complaints confirm supply loss in Kolvan area',
+  },
+  {
+    id: 'e7', timestamp: '14:25:00', type: 'sensor',
+    title: 'Transformer Temperature Spike',
+    location: 'DTR-2 reading 89°C',
+    evidenceCategory: 'cause', strength: 'moderate',
+    impact: 'Transformer overload +5%',
+    detail: 'Temperature above normal operating range',
+  },
+  {
+    id: 'e8', timestamp: '14:26:30', type: 'sensor',
+    title: 'Current Near Zero',
+    location: 'Section B feeders',
+    evidenceCategory: 'location', strength: 'strong',
+    impact: 'Section B +6%',
+    detail: 'Confirms loss of supply on Section B conductors',
+  },
 ];
+
+// Evidence triggers matching belief history for annotation
+export const evidenceTriggers: Record<number, string> = {
+  0: 'Prior',
+  1: 'Relay trip',
+  2: 'Last-gasp',
+  3: 'Voltage collapse',
+  4: 'Wind alert',
+  5: 'Complaints',
+  6: 'Temp spike',
+  7: 'Current zero',
+};
 
 // Initial belief history (probability over time)
 export function generateInitialBeliefHistory(): BeliefSnapshot[] {
@@ -213,20 +338,21 @@ export function generateInitialBeliefHistory(): BeliefSnapshot[] {
 
   // Simulate belief evolution: starts uncertain, converges on section B
   const trajectory = [
-    { A: 0.33, B: 0.34, C: 0.33 },  // uniform prior
-    { A: 0.28, B: 0.42, C: 0.30 },  // first evidence
-    { A: 0.20, B: 0.55, C: 0.25 },  // meter last-gasp
-    { A: 0.15, B: 0.65, C: 0.20 },  // voltage collapse
-    { A: 0.10, B: 0.75, C: 0.15 },  // wind alert
-    { A: 0.07, B: 0.82, C: 0.11 },  // complaints
-    { A: 0.05, B: 0.87, C: 0.08 },  // temp spike
-    { A: 0.03, B: 0.91, C: 0.06 },  // current zero
+    { A: 0.33, B: 0.34, C: 0.33, trigger: 'Uniform prior' },
+    { A: 0.28, B: 0.42, C: 0.30, trigger: 'Relay trip +18%' },
+    { A: 0.20, B: 0.55, C: 0.25, trigger: 'Last-gasp +7%' },
+    { A: 0.15, B: 0.65, C: 0.20, trigger: 'Voltage collapse +9%' },
+    { A: 0.10, B: 0.75, C: 0.15, trigger: 'Wind alert +12%' },
+    { A: 0.07, B: 0.82, C: 0.11, trigger: 'Complaints +4%' },
+    { A: 0.05, B: 0.87, C: 0.08, trigger: 'Temp spike +5%' },
+    { A: 0.03, B: 0.91, C: 0.06, trigger: 'Current zero +6%' },
   ];
 
   trajectory.forEach((t, i) => {
     snapshots.push({
       timestamp: new Date(now - (trajectory.length - 1 - i) * 60000).toISOString(),
       sections: { A: t.A, B: t.B, C: t.C },
+      trigger: t.trigger,
     });
   });
 

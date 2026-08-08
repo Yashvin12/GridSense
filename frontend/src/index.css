@@ -1,67 +1,84 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ------------------------------------------------------------------ */
-/* GridMind AI - Design System                                         */
-/* Industrial control-room aesthetic. Dark, data-dense, high contrast. */
+/* GridSense — Design System                                           */
+/* Industrial control-room aesthetic. Charcoal, dense, semantic color. */
 /* ------------------------------------------------------------------ */
 
-/* ---- Base ---- */
+/* ---- Base Palette ---- */
 :root {
   color-scheme: dark;
-  --grid-bg: #080b14;
-  --grid-surface: #0f1420;
-  --grid-surface-2: #161d2e;
-  --grid-border: rgba(30, 58, 95, 0.3);
-  --grid-text: #e2e8f0;
-  --grid-text-dim: #64748b;
-  --grid-cyan: #06b6d4;
-  --grid-amber: #f59e0b;
-  --grid-red: #ef4444;
-  --grid-emerald: #10b981;
-  --grid-purple: #8b5cf6;
+
+  /* Surface hierarchy */
+  --gs-bg:         #0d1117;
+  --gs-surface:    #161b22;
+  --gs-surface-2:  #1c2128;
+  --gs-surface-3:  #21262d;
+  --gs-border:     rgba(48, 54, 61, 0.6);
+  --gs-border-strong: rgba(48, 54, 61, 0.9);
+
+  /* Text hierarchy */
+  --gs-text:       #e6edf3;
+  --gs-text-secondary: #8b949e;
+  --gs-text-tertiary:  #6e7681;
+
+  /* Semantic colors ONLY — every color must mean something */
+  --gs-red:    #f85149;   /* Fault / dangerous / confirmed abnormal */
+  --gs-amber:  #d29922;   /* Warning / probable cause / uncertainty */
+  --gs-green:  #3fb950;   /* Healthy / energized / confirmed safe */
+  --gs-blue:   #58a6ff;   /* Neutral telemetry / informational */
 }
 
 html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: var(--grid-bg);
-  color: var(--grid-text);
-  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 14px;
+  background-color: var(--gs-bg);
+  color: var(--gs-text);
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
 }
 
-/* ---- Tabular numbers everywhere data lives ---- */
+/* ---- Monospace for data ---- */
 .font-mono, .tabular-nums, [class*="font-mono"] {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- Grid Card component ---- */
-.grid-card {
-  background-color: var(--grid-surface);
-  border: 1px solid var(--grid-border);
-  border-radius: 12px;
-  padding: 16px;
-  transition: border-color 0.3s ease;
-}
-
-.grid-card:hover {
-  border-color: rgba(30, 58, 95, 0.5);
-}
-
-.grid-card-header {
+/* ---- Section labels ---- */
+.gs-section-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--grid-text-dim);
-  margin-bottom: 12px;
+  letter-spacing: 0.06em;
+  color: var(--gs-text-tertiary);
+}
+
+/* ---- Panel containers ---- */
+.gs-panel {
+  background-color: var(--gs-surface);
+  border: 1px solid var(--gs-border);
+  border-radius: 3px;
+  padding: 12px;
+}
+
+.gs-panel-flush {
+  background-color: var(--gs-surface);
+  border: 1px solid var(--gs-border);
+  border-radius: 3px;
+}
+
+/* ---- Dividers ---- */
+.gs-divider {
+  height: 1px;
+  background-color: var(--gs-border);
+  border: none;
+  margin: 8px 0;
 }
 
 /* ---- Custom scrollbar ---- */
@@ -72,93 +89,98 @@ html, body, #root {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.2);
-  border-radius: 4px;
+  background: rgba(110, 118, 129, 0.25);
+  border-radius: 2px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.4);
+  background: rgba(110, 118, 129, 0.45);
 }
 
-/* ---- Evidence new item animation ---- */
-.evidence-new {
-  animation: evidence-flash 1.5s ease-out;
+/* ---- Evidence new item transition ---- */
+.evidence-enter {
+  animation: evidence-slide 0.4s ease-out;
 }
 
-@keyframes evidence-flash {
+@keyframes evidence-slide {
   0% {
-    background-color: rgba(16, 185, 129, 0.15);
-    transform: translateX(-4px);
+    opacity: 0;
+    transform: translateY(-4px);
   }
   100% {
-    background-color: rgba(16, 185, 129, 0.06);
-    transform: translateX(0);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* ---- Leaflet overrides for dark theme ---- */
+/* ---- Leaflet overrides for dark industrial theme ---- */
 .leaflet-container {
-  background: #080b14 !important;
-  font-family: 'Outfit', system-ui, sans-serif;
+  background: #0d1117 !important;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
 .leaflet-popup-content-wrapper {
-  background: #1e293b !important;
-  color: #e2e8f0 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid rgba(30, 58, 95, 0.5) !important;
+  background: var(--gs-surface-2) !important;
+  color: var(--gs-text) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid var(--gs-border-strong) !important;
+  font-size: 12px !important;
 }
 
 .leaflet-popup-tip {
-  background: #1e293b !important;
+  background: var(--gs-surface-2) !important;
 }
 
 .leaflet-popup-close-button {
-  color: #64748b !important;
+  color: var(--gs-text-tertiary) !important;
 }
 
 .leaflet-control-zoom a {
-  background: #0f1420 !important;
-  color: #94a3b8 !important;
-  border-color: rgba(30, 58, 95, 0.3) !important;
+  background: var(--gs-surface) !important;
+  color: var(--gs-text-secondary) !important;
+  border-color: var(--gs-border) !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background: #161d2e !important;
-  color: #e2e8f0 !important;
+  background: var(--gs-surface-2) !important;
+  color: var(--gs-text) !important;
 }
 
 .leaflet-bar {
-  border: 1px solid rgba(30, 58, 95, 0.3) !important;
-  border-radius: 8px !important;
+  border: 1px solid var(--gs-border) !important;
+  border-radius: 3px !important;
   overflow: hidden;
 }
 
-/* ---- Recharts tooltip styling ---- */
+/* ---- Recharts tooltip ---- */
 .recharts-tooltip-wrapper {
   outline: none !important;
 }
 
-/* ---- Subtle scan line effect on body (control-room feel) ---- */
-@media (prefers-reduced-motion: no-preference) {
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.015) 2px,
-      rgba(0, 0, 0, 0.015) 4px
-    );
-  }
-}
-
 /* ---- Selection color ---- */
 ::selection {
-  background-color: rgba(6, 182, 212, 0.3);
-  color: #e2e8f0;
+  background-color: rgba(88, 166, 255, 0.3);
+  color: var(--gs-text);
+}
+
+/* ---- Map section labels ---- */
+.gs-map-label {
+  background: none !important;
+  border: none !important;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  white-space: nowrap;
+}
+
+/* ---- Map legend ---- */
+.gs-map-legend {
+  background: rgba(13, 17, 23, 0.92) !important;
+  border: 1px solid var(--gs-border) !important;
+  border-radius: 3px !important;
+  padding: 8px 10px !important;
+  color: var(--gs-text-secondary) !important;
+  font-size: 11px !important;
+  line-height: 1.6 !important;
 }

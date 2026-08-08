@@ -39,7 +39,7 @@ Thumbs.db
 # Vite / React cache
 .vite/
 
-# Python / FastAPI / AI Core (Teammates 2 & 3)
+# Python / FastAPI / AI Core
 __pycache__/
 *.py[cod]
 *$py.class

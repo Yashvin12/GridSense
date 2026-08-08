@@ -1,98 +1,70 @@
-// SectionProbabilities - section probability distribution visualization
+// SectionProbabilities — horizontal bars only, no donut chart
+// Winning hypothesis immediately obvious via bar dominance
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useGrid } from '../../context/GridContext';
 import { AnimatedNumber } from '../shared/AnimatedNumber';
 
 const SECTION_COLORS: Record<string, string> = {
-  A: '#10b981',
-  B: '#ef4444',
-  C: '#f59e0b',
+  A: '#3fb950',
+  B: '#f85149',
+  C: '#d29922',
 };
 
 export function SectionProbabilities() {
   const { state } = useGrid();
   const { sectionProbabilities } = state;
 
-  const data = sectionProbabilities.map((sp) => ({
-    name: `Section ${sp.section}`,
-    value: Number((sp.probability * 100).toFixed(1)),
-    section: sp.section,
-  }));
+  // Sort by probability descending
+  const sorted = [...sectionProbabilities].sort((a, b) => b.probability - a.probability);
 
   return (
-    <div className="grid-card h-full">
-      <div className="grid-card-header mb-4">Fault Distribution</div>
+    <div className="gs-panel h-full">
+      <div className="gs-section-label mb-3">Section Probabilities</div>
 
-      <div className="flex items-center gap-6">
-        {/* Donut chart */}
-        <div className="w-40 h-40 shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={45}
-                outerRadius={65}
-                paddingAngle={3}
-                dataKey="value"
-                animationDuration={800}
-              >
-                {data.map((entry) => (
-                  <Cell
-                    key={entry.section}
-                    fill={SECTION_COLORS[entry.section] || '#64748b'}
-                    stroke="none"
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid rgba(30,58,95,0.5)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(value: number) => [`${value}%`]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="space-y-3">
+        {sorted.map((sp) => {
+          const color = SECTION_COLORS[sp.section] || '#6e7681';
+          const pct = Math.round(sp.probability * 100);
+          const isTop = sp.probability > 0.5;
 
-        {/* Section breakdown */}
-        <div className="flex-1 space-y-4">
-          {sectionProbabilities.map((sp) => {
-            const color = SECTION_COLORS[sp.section] || '#64748b';
-            return (
-              <div key={sp.section} className="flex items-center gap-3">
+          return (
+            <div key={sp.section}>
+              <div className="flex items-baseline justify-between mb-1">
                 <span
-                  className="w-3 h-3 rounded-sm shrink-0"
-                  style={{ backgroundColor: color }}
+                  className="text-sm font-medium"
+                  style={{ color: isTop ? 'var(--gs-text)' : 'var(--gs-text-secondary)' }}
+                >
+                  Section {sp.section}
+                </span>
+                <AnimatedNumber
+                  value={sp.probability * 100}
+                  suffix="%"
+                  decimals={0}
+                  className={`text-sm font-bold ${isTop ? 'text-lg' : ''}`}
                 />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-300">Section {sp.section}</span>
-                    <AnimatedNumber
-                      value={sp.probability * 100}
-                      suffix="%"
-                      decimals={1}
-                      className="text-sm font-bold"
-                    />
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${sp.probability * 100}%`,
-                        backgroundColor: color,
-                      }}
-                    />
-                  </div>
-                </div>
               </div>
-            );
-          })}
+              <div
+                className="rounded-sm overflow-hidden"
+                style={{ height: isTop ? 8 : 5, backgroundColor: 'rgba(255,255,255,0.04)' }}
+              >
+                <div
+                  className="h-full rounded-sm transition-all duration-700 ease-out"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: color,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Interpretation */}
+      <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--gs-border)' }}>
+        <div className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+          Section {sorted[0]?.section} has {Math.round((sorted[0]?.probability || 0) * 100)}% posterior probability
+          of containing the fault. Other sections sum to {Math.round((1 - (sorted[0]?.probability || 0)) * 100)}%.
         </div>
       </div>
     </div>

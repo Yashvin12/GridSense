@@ -1,4 +1,5 @@
-// Sidebar - vertical icon navigation with active state indicator
+// Sidebar — compact navigation rail with text labels
+// Domain-appropriate icons, recognition over recall
 
 import { useGrid } from '../../context/GridContext';
 import type { GridState } from '../../context/GridContext';
@@ -12,13 +13,13 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Overview',
     icon: (
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="2" width="7" height="8" rx="1" />
-        <rect x="11" y="2" width="7" height="5" rx="1" />
-        <rect x="2" y="12" width="7" height="6" rx="1" />
-        <rect x="11" y="9" width="7" height="9" rx="1" />
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9h12M3 4.5h12M3 13.5h12" />
+        <circle cx="14" cy="4.5" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="7" cy="9" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="11" cy="13.5" r="1.5" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
@@ -26,9 +27,9 @@ const navItems: NavItem[] = [
     id: 'evidence',
     label: 'Evidence',
     icon: (
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="2,15 5,8 8,12 11,4 14,10 17,6" />
-        <line x1="2" y1="18" x2="18" y2="18" />
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="2,14 5,7 8,11 11,3 14,9 16,5" />
+        <line x1="2" y1="16" x2="16" y2="16" />
       </svg>
     ),
   },
@@ -36,21 +37,22 @@ const navItems: NavItem[] = [
     id: 'crew',
     label: 'Crew',
     icon: (
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="10" cy="7" r="3" />
-        <path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-        <path d="M14 3l2 2-2 2" />
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 16v-1a4 4 0 014-4h2a4 4 0 014 4v1" />
+        <circle cx="9" cy="6" r="3" />
+        <path d="M14 4l1.5 1.5L14 7" />
       </svg>
     ),
   },
   {
     id: 'analysis',
-    label: 'Analysis',
+    label: 'Causes',
     icon: (
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="12" width="3" height="6" rx="0.5" />
-        <rect x="8.5" y="7" width="3" height="11" rx="0.5" />
-        <rect x="14" y="2" width="3" height="16" rx="0.5" />
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 2v4M9 6l-4 4M9 6l4 4M5 10v4M13 10v4" />
+        <circle cx="9" cy="2" r="1" fill="currentColor" stroke="none" />
+        <circle cx="5" cy="14" r="1" fill="currentColor" stroke="none" />
+        <circle cx="13" cy="14" r="1" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
@@ -61,61 +63,53 @@ export function Sidebar() {
 
   return (
     <nav
-      className="fixed left-0 top-0 h-full w-16 flex flex-col items-center py-5 z-40"
+      className="fixed left-0 top-0 h-full w-[52px] flex flex-col items-center py-3 z-40"
       style={{
-        backgroundColor: 'rgba(8, 11, 20, 0.95)',
-        borderRight: '1px solid rgba(30, 58, 95, 0.3)',
-        backdropFilter: 'blur(12px)',
+        backgroundColor: '#0d1117',
+        borderRight: '1px solid var(--gs-border)',
       }}
       aria-label="Main navigation"
     >
-      {/* Logo mark */}
-      <div className="mb-8 flex items-center justify-center w-9 h-9 rounded-lg"
-        style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}
+      {/* Logo mark — simple wordmark */}
+      <div className="mb-6 flex items-center justify-center w-8 h-8"
+        style={{ color: 'var(--gs-text)' }}
       >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-          <path d="M9 2v14M2 9h14M4 4l10 10M14 4L4 14" />
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M11 2v18M2 11h18M5 5l12 12" />
         </svg>
       </div>
 
       {/* Nav items */}
-      <div className="flex flex-col gap-1 flex-1">
+      <div className="flex flex-col gap-0.5 flex-1 w-full px-1">
         {navItems.map((item) => {
           const isActive = state.activeView === item.id;
           return (
             <button
               key={item.id}
               onClick={() => setView(item.id)}
-              className={`
-                relative flex items-center justify-center w-11 h-11 rounded-lg
-                transition-colors duration-200 group
-                ${isActive
-                  ? 'text-cyan-400'
-                  : 'text-slate-500 hover:text-slate-300'
-                }
-              `}
-              style={isActive ? { backgroundColor: 'rgba(6, 182, 212, 0.1)' } : {}}
+              className="relative flex flex-col items-center justify-center w-full py-2 transition-colors duration-150 group"
+              style={{
+                color: isActive ? 'var(--gs-text)' : 'var(--gs-text-tertiary)',
+                backgroundColor: isActive ? 'var(--gs-surface-2)' : 'transparent',
+                borderRadius: 3,
+                cursor: 'pointer',
+                border: 'none',
+              }}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
             >
               {/* Active indicator bar */}
               {isActive && (
                 <span
-                  className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full"
-                  style={{ backgroundColor: '#06b6d4' }}
+                  className="absolute left-0 top-1.5 bottom-1.5 w-[2px]"
+                  style={{ backgroundColor: 'var(--gs-text)' }}
                 />
               )}
               {item.icon}
-
-              {/* Tooltip */}
-              <span className="
-                absolute left-14 px-2.5 py-1 rounded-md text-xs font-medium
-                bg-slate-800 text-slate-200 whitespace-nowrap
-                opacity-0 pointer-events-none
-                group-hover:opacity-100
-                transition-opacity duration-150
-                border border-slate-700/50
-              ">
+              <span
+                className="text-[9px] font-medium mt-0.5 leading-tight"
+                style={{ color: isActive ? 'var(--gs-text-secondary)' : 'var(--gs-text-tertiary)' }}
+              >
                 {item.label}
               </span>
             </button>

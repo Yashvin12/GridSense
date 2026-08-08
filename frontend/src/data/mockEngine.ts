@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
-// GridMind AI  -  Mock Bayesian Engine
+// GridSense — Mock Bayesian Engine
 // Simulates probability updates when crew confirms/denies fault at a location.
-// Also generates live telemetry points for the "system thinking" feel.
+// Also generates live telemetry points for the real-time feed.
 // ---------------------------------------------------------------------------
 
 import {
@@ -123,7 +123,7 @@ export function generateTelemetryPoint(): TelemetryPoint {
 /**
  * Create a new belief snapshot from current probabilities.
  */
-export function createBeliefSnapshot(probs: SectionProbability[]): BeliefSnapshot {
+export function createBeliefSnapshot(probs: SectionProbability[], trigger?: string): BeliefSnapshot {
   const sections: Record<string, number> = {};
   probs.forEach((p) => {
     sections[p.section] = p.probability;
@@ -131,11 +131,12 @@ export function createBeliefSnapshot(probs: SectionProbability[]): BeliefSnapsho
   return {
     timestamp: new Date().toISOString(),
     sections,
+    trigger,
   };
 }
 
 /**
- * Generate an evidence event for crew actions.
+ * Generate an enriched evidence event for crew actions.
  */
 let evidenceCounter = 100;
 export function createCrewEvidenceEvent(
@@ -146,12 +147,29 @@ export function createCrewEvidenceEvent(
   const now = new Date();
   const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
+  if (found) {
+    return {
+      id: `e${evidenceCounter}`,
+      timestamp: timeStr,
+      type: 'crew',
+      title: 'Crew Confirmed Fault',
+      location: stopName,
+      evidenceCategory: 'location',
+      strength: 'very_strong',
+      impact: 'Section B +5%',
+      detail: `Vegetation contact on conductor confirmed at ${stopName}`,
+    };
+  }
+
   return {
     id: `e${evidenceCounter}`,
     timestamp: timeStr,
     type: 'crew',
-    message: found
-      ? `Crew confirmed fault at ${stopName}: vegetation contact on conductor`
-      : `Crew inspection at ${stopName}: no fault found, section clear`,
+    title: 'Crew Inspection Clear',
+    location: stopName,
+    evidenceCategory: 'location',
+    strength: 'strong',
+    impact: 'Section redistributed',
+    detail: `No fault found at ${stopName} — probability redistributed`,
   };
 }

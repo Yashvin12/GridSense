@@ -1,4 +1,4 @@
-// EvidenceView - telemetry charts + belief evolution + evidence log
+// EvidenceView — belief chart (top) + evidence stream (bottom-left) + telemetry (bottom-right)
 
 import { TelemetryChart } from '../components/evidence/TelemetryChart';
 import { BeliefChart } from '../components/evidence/BeliefChart';
@@ -6,20 +6,20 @@ import { EvidenceLog } from '../components/evidence/EvidenceLog';
 
 export function EvidenceView() {
   return (
-    <div className="h-full grid grid-cols-[1fr_320px] grid-rows-2 gap-3">
-      {/* Belief chart - star feature, top left */}
-      <div className="row-span-1">
+    <div className="h-full flex flex-col gap-1.5" style={{ minHeight: 0 }}>
+      {/* Belief chart — star feature, top, 55% height */}
+      <div style={{ flex: '1 1 55%', minHeight: 0 }}>
         <BeliefChart />
       </div>
 
-      {/* Evidence log - right column, full height */}
-      <div className="row-span-2">
-        <EvidenceLog />
-      </div>
-
-      {/* Telemetry charts - bottom left */}
-      <div className="row-span-1">
-        <TelemetryChart />
+      {/* Bottom: evidence stream + telemetry side by side */}
+      <div className="flex gap-1.5" style={{ flex: '1 1 45%', minHeight: 0 }}>
+        <div style={{ flex: '1 1 55%', minWidth: 0 }}>
+          <EvidenceLog />
+        </div>
+        <div style={{ flex: '1 1 45%', minWidth: 0 }}>
+          <TelemetryChart />
+        </div>
       </div>
     </div>
   );

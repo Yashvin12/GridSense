@@ -1,86 +1,102 @@
-// EvidenceLog - scrolling timeline of evidence events
+// EvidenceLog — structured evidence stream with visual weight by strength
+// Each item shows: what happened, when, where, how important, what it affected
 
 import { useGrid } from '../../context/GridContext';
 
-const typeIcons: Record<string, { icon: React.ReactNode; color: string }> = {
-  sensor: {
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <circle cx="7" cy="7" r="2" />
-        <path d="M4 4a4.2 4.2 0 000 6M10 4a4.2 4.2 0 010 6" />
-      </svg>
-    ),
-    color: '#06b6d4',
-  },
-  meter: {
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <rect x="2" y="3" width="10" height="8" rx="1" />
-        <path d="M5 6h4M5 9h2" />
-      </svg>
-    ),
-    color: '#8b5cf6',
-  },
-  crew: {
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <circle cx="7" cy="5" r="2" />
-        <path d="M3 13c0-2.2 1.8-4 4-4s4 1.8 4 4" />
-      </svg>
-    ),
-    color: '#10b981',
-  },
-  weather: {
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M4 10l1-3h4l1 3M3 7c0-2.2 1.8-4 4-4s4 1.8 4 4" />
-      </svg>
-    ),
-    color: '#f59e0b',
-  },
-  complaint: {
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M7 2v5M7 10v1" />
-        <circle cx="7" cy="7" r="6" />
-      </svg>
-    ),
-    color: '#ef4444',
-  },
+const strengthColors: Record<string, string> = {
+  very_strong: 'var(--gs-red)',
+  strong: 'var(--gs-amber)',
+  moderate: 'var(--gs-text-secondary)',
+  weak: 'var(--gs-text-tertiary)',
 };
 
-export function EvidenceLog() {
+const strengthLabels: Record<string, string> = {
+  very_strong: 'Very strong',
+  strong: 'Strong',
+  moderate: 'Moderate',
+  weak: 'Weak',
+};
+
+const typeIndicators: Record<string, { symbol: string; color: string }> = {
+  sensor:    { symbol: '●', color: 'var(--gs-blue)' },
+  meter:     { symbol: '●', color: 'var(--gs-blue)' },
+  crew:      { symbol: '✓', color: 'var(--gs-green)' },
+  weather:   { symbol: '▲', color: 'var(--gs-amber)' },
+  complaint: { symbol: '●', color: 'var(--gs-red)' },
+};
+
+export function EvidenceLog({ compact = false }: { compact?: boolean }) {
   const { state } = useGrid();
   const { evidenceLog } = state;
 
+  const items = compact ? evidenceLog.slice(0, 6) : evidenceLog;
+
   return (
-    <div className="grid-card h-full flex flex-col">
-      <div className="grid-card-header mb-3">Evidence Stream</div>
-      <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar">
-        {evidenceLog.map((event, i) => {
-          const typeInfo = typeIcons[event.type] || typeIcons.sensor;
+    <div className="gs-panel h-full flex flex-col">
+      <div className="gs-section-label mb-2">Evidence Stream</div>
+      <div className="flex-1 overflow-y-auto space-y-0.5 custom-scrollbar">
+        {items.map((event, i) => {
+          const indicator = typeIndicators[event.type] || typeIndicators.sensor;
           const isNew = i === 0 && event.type === 'crew';
+          const isStrong = event.strength === 'very_strong' || event.strength === 'strong';
 
           return (
             <div
               key={event.id}
-              className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg transition-colors duration-300 ${
-                isNew ? 'evidence-new' : ''
-              }`}
-              style={isNew ? { backgroundColor: 'rgba(16, 185, 129, 0.06)' } : {}}
+              className={`px-2 py-1.5 transition-colors duration-300 ${isNew ? 'evidence-enter' : ''}`}
+              style={{
+                borderLeft: `2px solid ${isStrong ? strengthColors[event.strength] : 'transparent'}`,
+                backgroundColor: isNew ? 'rgba(63, 185, 80, 0.04)' : 'transparent',
+              }}
             >
-              <div
-                className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 mt-0.5"
-                style={{
-                  backgroundColor: `${typeInfo.color}15`,
-                  color: typeInfo.color,
-                }}
-              >
-                {typeInfo.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-slate-300 leading-relaxed">{event.message}</div>
-                <div className="text-[10px] font-mono text-slate-600 mt-0.5">{event.timestamp}</div>
+              <div className="flex items-start gap-2">
+                {/* Type indicator */}
+                <span className="text-[10px] mt-0.5 shrink-0" style={{ color: indicator.color }}>
+                  {indicator.symbol}
+                </span>
+
+                <div className="flex-1 min-w-0">
+                  {/* Title + timestamp */}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span
+                      className="text-xs font-medium leading-tight"
+                      style={{
+                        color: isStrong ? 'var(--gs-text)' : 'var(--gs-text-secondary)',
+                      }}
+                    >
+                      {event.title}
+                    </span>
+                    <span className="font-mono text-[10px] tabular-nums shrink-0"
+                      style={{ color: 'var(--gs-text-tertiary)' }}
+                    >
+                      {event.timestamp}
+                    </span>
+                  </div>
+
+                  {/* Location */}
+                  <div className="text-[10px] mt-0.5" style={{ color: 'var(--gs-text-tertiary)' }}>
+                    {event.location}
+                  </div>
+
+                  {/* Impact + strength */}
+                  {!compact && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-mono"
+                        style={{ color: strengthColors[event.strength] }}
+                      >
+                        {strengthLabels[event.strength]}
+                      </span>
+                      <span className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+                        · {event.evidenceCategory === 'location' ? 'Location' : 'Cause'}
+                      </span>
+                      <span className="text-[10px] font-mono font-medium"
+                        style={{ color: 'var(--gs-text-secondary)' }}
+                      >
+                        → {event.impact}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );

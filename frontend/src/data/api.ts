@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// GridMind AI  -  API Abstraction Layer
+// GridSense — API Abstraction Layer
 // Currently returns mock data. Structured so real fetch() calls to the
 // FastAPI backend can drop in with minimal changes.
 // ---------------------------------------------------------------------------
