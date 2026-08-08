@@ -156,7 +156,7 @@ export function createCrewEvidenceEvent(
       location: stopName,
       evidenceCategory: 'location',
       strength: 'very_strong',
-      impact: 'Section B +5%',
+      impact: 'Section B — location confirmed',
       detail: `Vegetation contact on conductor confirmed at ${stopName}`,
     };
   }
@@ -169,7 +169,7 @@ export function createCrewEvidenceEvent(
     location: stopName,
     evidenceCategory: 'location',
     strength: 'strong',
-    impact: 'Section redistributed',
-    detail: `No fault found at ${stopName} — probability redistributed`,
+    impact: 'Section B — no fault found',
+    detail: `No fault found at ${stopName} — belief redistributed to remaining sections`,
   };
 }

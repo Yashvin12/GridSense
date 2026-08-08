@@ -1,5 +1,7 @@
-// EvidenceLog — structured evidence stream with visual weight by strength
-// Each item shows: what happened, when, where, how important, what it affected
+// EvidenceLog — structured evidence stream
+// Each item: WHAT / WHEN / WHERE / STRENGTH / EFFECT
+// Compact mode: shows strength indicator — not stripped bare
+// No gs-panel wrapper — lives inside view containers that already provide structure
 
 import { useGrid } from '../../context/GridContext';
 
@@ -17,24 +19,29 @@ const strengthLabels: Record<string, string> = {
   weak: 'Weak',
 };
 
-const typeIndicators: Record<string, { symbol: string; color: string }> = {
-  sensor:    { symbol: '●', color: 'var(--gs-blue)' },
-  meter:     { symbol: '●', color: 'var(--gs-blue)' },
-  crew:      { symbol: '✓', color: 'var(--gs-green)' },
-  weather:   { symbol: '▲', color: 'var(--gs-amber)' },
-  complaint: { symbol: '●', color: 'var(--gs-red)' },
+const typeIndicators: Record<string, { label: string; color: string }> = {
+  sensor:    { label: 'Sensor',    color: 'var(--gs-blue)' },
+  meter:     { label: 'Meter',     color: 'var(--gs-blue)' },
+  crew:      { label: 'Crew',      color: 'var(--gs-green)' },
+  weather:   { label: 'Weather',   color: 'var(--gs-amber)' },
+  complaint: { label: 'Complaint', color: 'var(--gs-red)' },
 };
 
 export function EvidenceLog({ compact = false }: { compact?: boolean }) {
   const { state } = useGrid();
   const { evidenceLog } = state;
 
-  const items = compact ? evidenceLog.slice(0, 6) : evidenceLog;
+  const items = compact ? evidenceLog.slice(0, 7) : evidenceLog;
 
   return (
-    <div className="gs-panel h-full flex flex-col">
-      <div className="gs-section-label mb-2">Evidence Stream</div>
-      <div className="flex-1 overflow-y-auto space-y-0.5 custom-scrollbar">
+    <div className="h-full flex flex-col" style={{ padding: compact ? '10px 0 0 0' : 0 }}>
+      <div
+        className="gs-section-label px-3 mb-2"
+        style={{ paddingTop: compact ? 0 : 12 }}
+      >
+        Evidence stream
+      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         {items.map((event, i) => {
           const indicator = typeIndicators[event.type] || typeIndicators.sensor;
           const isNew = i === 0 && event.type === 'crew';
@@ -43,60 +50,51 @@ export function EvidenceLog({ compact = false }: { compact?: boolean }) {
           return (
             <div
               key={event.id}
-              className={`px-2 py-1.5 transition-colors duration-300 ${isNew ? 'evidence-enter' : ''}`}
+              className={`px-3 py-2 transition-colors duration-300 ${isNew ? 'evidence-enter' : ''}`}
               style={{
                 borderLeft: `2px solid ${isStrong ? strengthColors[event.strength] : 'transparent'}`,
                 backgroundColor: isNew ? 'rgba(63, 185, 80, 0.04)' : 'transparent',
+                borderBottom: '1px solid rgba(48,54,61,0.35)',
               }}
             >
-              <div className="flex items-start gap-2">
-                {/* Type indicator */}
-                <span className="text-[10px] mt-0.5 shrink-0" style={{ color: indicator.color }}>
-                  {indicator.symbol}
+              {/* Row 1: WHAT + WHEN */}
+              <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                <span
+                  className="text-xs font-medium leading-tight"
+                  style={{ color: isStrong ? 'var(--gs-text)' : 'var(--gs-text-secondary)' }}
+                >
+                  {event.title}
                 </span>
+                <span className="font-mono text-[10px] tabular-nums shrink-0" style={{ color: 'var(--gs-text-tertiary)' }}>
+                  {event.timestamp}
+                </span>
+              </div>
 
-                <div className="flex-1 min-w-0">
-                  {/* Title + timestamp */}
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span
-                      className="text-xs font-medium leading-tight"
-                      style={{
-                        color: isStrong ? 'var(--gs-text)' : 'var(--gs-text-secondary)',
-                      }}
-                    >
-                      {event.title}
+              {/* Row 2: WHERE */}
+              <div className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+                {event.location}
+              </div>
+
+              {/* Row 3: STRENGTH + EFFECT — always visible, even in compact mode */}
+              <div className="flex items-center gap-2 mt-1">
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{ color: strengthColors[event.strength] }}
+                >
+                  {strengthLabels[event.strength]}
+                </span>
+                <span style={{ color: 'var(--gs-text-tertiary)', fontSize: 10 }}>·</span>
+                <span className="text-[10px]" style={{ color: indicator.color }}>
+                  {indicator.label}
+                </span>
+                {!compact && (
+                  <>
+                    <span style={{ color: 'var(--gs-text-tertiary)', fontSize: 10 }}>·</span>
+                    <span className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+                      {event.impact}
                     </span>
-                    <span className="font-mono text-[10px] tabular-nums shrink-0"
-                      style={{ color: 'var(--gs-text-tertiary)' }}
-                    >
-                      {event.timestamp}
-                    </span>
-                  </div>
-
-                  {/* Location */}
-                  <div className="text-[10px] mt-0.5" style={{ color: 'var(--gs-text-tertiary)' }}>
-                    {event.location}
-                  </div>
-
-                  {/* Impact + strength */}
-                  {!compact && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-mono"
-                        style={{ color: strengthColors[event.strength] }}
-                      >
-                        {strengthLabels[event.strength]}
-                      </span>
-                      <span className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
-                        · {event.evidenceCategory === 'location' ? 'Location' : 'Cause'}
-                      </span>
-                      <span className="text-[10px] font-mono font-medium"
-                        style={{ color: 'var(--gs-text-secondary)' }}
-                      >
-                        → {event.impact}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             </div>
           );

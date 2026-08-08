@@ -1,10 +1,28 @@
-// CauseBarList — cause analysis with supporting evidence contributions
-// Top cause gets expanded treatment, competitors shown as compact bars
+// CauseBarList — cause analysis with supporting evidence
+// Top cause gets expanded treatment with qualitative evidence strength labels
+// Competitors shown as compact bars
+// "What would change this?" section explains probabilistic nature of the model
 
 import { useGrid } from '../../context/GridContext';
 import { ProbabilityBar } from '../shared/ProbabilityBar';
 import { AnimatedNumber } from '../shared/AnimatedNumber';
-import { causeEvidenceMap } from '../../data/mockData';
+import { causeEvidenceMap, whatWouldChangeBelief } from '../../data/mockData';
+
+const strengthColors: Record<string, string> = {
+  very_strong: 'var(--gs-red)',
+  strong:      'var(--gs-amber)',
+  moderate:    'var(--gs-text-secondary)',
+  weak:        'var(--gs-text-tertiary)',
+  none:        'var(--gs-text-tertiary)',
+};
+
+const strengthLabels: Record<string, string> = {
+  very_strong: 'Very strong',
+  strong:      'Strong',
+  moderate:    'Moderate',
+  weak:        'Weak',
+  none:        'None',
+};
 
 export function CauseBarList() {
   const { state } = useGrid();
@@ -14,16 +32,18 @@ export function CauseBarList() {
   const competitors = causes.slice(1);
 
   return (
-    <div className="gs-panel h-full flex flex-col">
-      <div className="gs-section-label mb-3">Cause Analysis</div>
+    <div className="gs-panel h-full flex flex-col overflow-y-auto custom-scrollbar">
 
       {/* ═══════ Top cause — expanded ═══════ */}
       {topCause && (
-        <div className="mb-4">
-          <div className="text-base font-semibold text-[var(--gs-text)] mb-1">
+        <div className="mb-0">
+          <div className="gs-section-label mb-1">Cause analysis</div>
+          <div className="text-sm font-semibold text-[var(--gs-text)] mt-2">
             {topCause.label}
           </div>
-          <div className="flex items-baseline gap-2 mb-3">
+
+          {/* Cause probability — explicitly labeled */}
+          <div className="flex items-baseline gap-2 mt-1 mb-3">
             <AnimatedNumber
               value={topCause.probability * 100}
               suffix="%"
@@ -31,54 +51,72 @@ export function CauseBarList() {
               className="text-2xl font-bold"
             />
             <span className="gs-section-label" style={{ color: 'var(--gs-amber)' }}>
-              Posterior Probability
+              Cause probability
             </span>
           </div>
 
-          {/* Supporting evidence */}
-          <div className="mb-1">
-            <span className="text-[10px] font-medium" style={{ color: 'var(--gs-text-tertiary)' }}>
-              Supporting evidence:
-            </span>
-          </div>
-          <div className="space-y-1">
+          {/* Supporting evidence — qualitative strength, not posterior deltas */}
+          <div className="gs-section-label mb-1.5" style={{ fontSize: 9 }}>Supporting evidence</div>
+          <div className="space-y-1.5">
             {(causeEvidenceMap[topCause.label] || []).map((ev, i) => (
-              <div key={i} className="flex items-center justify-between gap-2">
-                <span className="text-[11px]" style={{ color: 'var(--gs-text-secondary)' }}>
+              <div key={i} className="flex items-start justify-between gap-3">
+                <span className="text-[11px] leading-snug" style={{ color: 'var(--gs-text-secondary)' }}>
                   {ev.description}
                 </span>
-                {ev.contribution > 0 && (
-                  <span className="font-mono text-[10px] font-medium shrink-0"
-                    style={{ color: 'var(--gs-amber)' }}
-                  >
-                    +{ev.contribution}%
-                  </span>
-                )}
+                <span
+                  className="text-[10px] font-semibold shrink-0"
+                  style={{ color: strengthColors[ev.strength] }}
+                >
+                  {strengthLabels[ev.strength]}
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="gs-divider" />
+      <div className="gs-divider my-3" />
 
       {/* ═══════ Competing hypotheses ═══════ */}
-      <div className="mt-3">
-        <div className="text-[10px] font-medium mb-2" style={{ color: 'var(--gs-text-tertiary)' }}>
-          Competing hypotheses:
-        </div>
+      <div>
+        <div className="gs-section-label mb-2">Competing hypotheses</div>
         <div className="space-y-3">
           {competitors.map((cause) => (
-            <ProbabilityBar
-              key={cause.label}
-              value={cause.probability}
-              label={cause.label}
-              showValue={true}
-              compact
-            />
+            <div key={cause.label}>
+              <ProbabilityBar
+                value={cause.probability}
+                label={cause.label}
+                showValue={true}
+                compact
+              />
+              <div className="text-[9px] mt-0.5" style={{ color: 'var(--gs-text-tertiary)' }}>
+                Cause probability
+              </div>
+            </div>
           ))}
         </div>
       </div>
+
+      <div className="gs-divider my-3" />
+
+      {/* ═══════ What would change this belief? ═══════ */}
+      <div>
+        <div className="gs-section-label mb-1.5">What would change this belief?</div>
+        <div className="space-y-1.5">
+          {whatWouldChangeBelief.map((item, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <span className="text-[10px] shrink-0 mt-px" style={{ color: 'var(--gs-text-tertiary)' }}>·</span>
+              <span className="text-[11px] leading-snug" style={{ color: 'var(--gs-text-secondary)' }}>
+                {item}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 text-[10px] italic" style={{ color: 'var(--gs-text-tertiary)' }}>
+          GridSense is probabilistic — beliefs update as new evidence arrives.
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -7,17 +7,23 @@ import { BeliefChart } from '../components/evidence/BeliefChart';
 export function CrewView() {
   return (
     <div className="h-full flex gap-1.5" style={{ minHeight: 0 }}>
-      {/* Left: inspection stops — primary */}
-      <div style={{ flex: '1 1 50%', minWidth: 0 }}>
+      {/* Left: inspection stops — primary operational panel */}
+      <div
+        className="gs-panel"
+        style={{ flex: '1 1 50%', minWidth: 0, padding: 0, display: 'flex', flexDirection: 'column' }}
+      >
         <InspectionStops />
       </div>
 
       {/* Right column: belief chart + map */}
       <div className="flex flex-col gap-1.5" style={{ flex: '1 1 50%', minWidth: 0 }}>
-        <div style={{ flex: '1 1 55%', minHeight: 0 }}>
+        <div
+          className="gs-panel"
+          style={{ flex: '1 1 50%', minHeight: 0, padding: 0, display: 'flex', flexDirection: 'column' }}
+        >
           <BeliefChart compact />
         </div>
-        <div style={{ flex: '1 1 45%', minHeight: 0 }}>
+        <div style={{ flex: '1 1 50%', minHeight: 0 }}>
           <FeederMap compact />
         </div>
       </div>

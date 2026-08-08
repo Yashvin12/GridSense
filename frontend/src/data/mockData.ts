@@ -14,30 +14,38 @@ export interface CauseEntry {
 }
 
 // Supporting evidence for cause analysis
+// strength: qualitative label — NOT a posterior percentage change
 export interface CauseEvidence {
   description: string;
-  contribution: number; // percentage points contributed
+  strength: 'very_strong' | 'strong' | 'moderate' | 'weak' | 'none';
 }
 
 export const causeEvidenceMap: Record<string, CauseEvidence[]> = {
   'Vegetation Contact': [
-    { description: 'High wind near Pole 43–46', contribution: 18 },
-    { description: 'Fault topology matches vegetation pattern', contribution: 11 },
-    { description: 'Voltage collapse pattern at DTR-2', contribution: 7 },
-    { description: 'Consumer outage reports from Kolvan', contribution: 4 },
+    { description: 'High wind near Pole 43–46', strength: 'very_strong' },
+    { description: 'Fault topology matches vegetation pattern', strength: 'strong' },
+    { description: 'Voltage collapse pattern at DTR-2', strength: 'strong' },
+    { description: 'Consumer outage reports from Kolvan', strength: 'moderate' },
   ],
   'Transformer Overload': [
-    { description: 'DTR-2 temperature spike to 89°C', contribution: 8 },
-    { description: 'Load pattern prior to fault', contribution: 4 },
+    { description: 'DTR-2 temperature spike to 89°C', strength: 'strong' },
+    { description: 'Load pattern prior to fault', strength: 'moderate' },
   ],
   'Broken Conductor': [
-    { description: 'Current near zero on Section B', contribution: 5 },
-    { description: 'Wind event raises conductor stress', contribution: 3 },
+    { description: 'Current near zero on Section B', strength: 'moderate' },
+    { description: 'Wind event raises conductor stress', strength: 'moderate' },
   ],
   'Illegal Tapping': [
-    { description: 'No supporting evidence', contribution: 0 },
+    { description: 'No supporting evidence', strength: 'none' },
   ],
 };
+
+// What would shift the top-cause belief
+export const whatWouldChangeBelief = [
+  'Physical inspection finds no vegetation contact at Pole 43–46',
+  'DTR-2 temperature returns to normal without relay operation',
+  'Crew finds broken conductor rather than tree contact',
+];
 
 export interface SwitchingStep {
   action: string;
@@ -75,6 +83,7 @@ export interface EvidenceEvent {
   location: string;
   evidenceCategory: 'location' | 'cause';
   strength: 'very_strong' | 'strong' | 'moderate' | 'weak';
+  // impact: qualitative description of what this evidence affects, NOT a posterior delta
   impact: string;
   detail: string;
 }
@@ -186,7 +195,7 @@ export const poweredVillages = ['Tamhini'];
 export const switchingPlan: SwitchingStep[] = [
   { action: 'Open Switch S2', status: 'recommended' },
   { action: 'Close Tie Switch T4', status: 'recommended' },
-  { action: 'Restore Bhira', status: 'pending' },
+  { action: 'Restore Bhira via alternate path', status: 'pending' },
 ];
 
 export const initialCrewPlan: CrewStop[] = [
@@ -194,18 +203,18 @@ export const initialCrewPlan: CrewStop[] = [
     stop: 'Pole 44', order: 1, status: 'pending',
     lat: 18.4995, lng: 73.4865, probability: 0.91,
     reasoning: [
-      'Highest posterior probability',
-      'Adjacent outage evidence',
-      'Current collapse nearby',
-      'Wind event near section',
+      'Highest posterior probability in Section B',
+      'Adjacent to current collapse boundary',
+      'Downstream of DTR-2 voltage event',
+      'Wind event corridor — Pole 43–46',
     ],
   },
   {
     stop: 'Pole 45', order: 2, status: 'pending',
     lat: 18.4970, lng: 73.4900, probability: 0.67,
     reasoning: [
-      'Adjacent to primary suspect',
-      'Check if damage extends downstream',
+      'Adjacent to primary suspect (Pole 44)',
+      'Check if damage extends downstream toward S2',
     ],
   },
   {
@@ -213,7 +222,7 @@ export const initialCrewPlan: CrewStop[] = [
     lat: 18.5020, lng: 73.4830, probability: 0.34,
     reasoning: [
       'Lower probability but within fault zone',
-      'Verify upstream boundary',
+      'Verify upstream boundary of Section B',
     ],
   },
 ];
@@ -226,17 +235,25 @@ export const initialSectionProbabilities: SectionProbability[] = [
 
 export const etaMinutes = 43;
 
+// Scenario start time anchor — all timestamps relative to this
+// Fault event at 14:22:00; evidence arrives 14:22–14:26
+const SCENARIO_DATE = '2026-08-08';
+
 // Generate realistic telemetry history (last 60 readings, 30s apart)
+// Pre-fault readings from ~13:52 to 14:22; fault onset at index 40 (14:22)
 function generateTelemetryHistory(): TelemetryPoint[] {
   const points: TelemetryPoint[] = [];
-  const now = Date.now();
-  for (let i = 59; i >= 0; i--) {
-    const ts = now - i * 30000;
-    const isFaultZone = i < 20; // fault started ~10 min ago
+  // Start 30 minutes before fault (13:52:00)
+  const scenarioStart = new Date(`${SCENARIO_DATE}T13:52:00+05:30`).getTime();
+
+  for (let i = 0; i < 60; i++) {
+    const ts = scenarioStart + i * 30000;
+    // Fault onset at reading index 40 (13:52 + 40*30s = 14:12 → fault at 14:22 = index 40+20=60... use 40)
+    const isFaultZone = i >= 40; // fault started ~10 min before end of window
     points.push({
       timestamp: new Date(ts).toISOString(),
       current: isFaultZone
-        ? 2.1 + Math.random() * 0.8  // abnormally low after fault
+        ? 2.1 + Math.random() * 0.8   // abnormally low after fault
         : 45 + Math.random() * 12,    // normal load current
       voltage: isFaultZone
         ? 180 + Math.random() * 30    // voltage sag
@@ -251,46 +268,54 @@ function generateTelemetryHistory(): TelemetryPoint[] {
 
 export const initialTelemetryHistory = generateTelemetryHistory();
 
+// Telemetry baseline values for contextual interpretation
+export const telemetryBaselines = {
+  current: { normal: 48, unit: 'A', label: 'Line current' },
+  voltage: { normal: 246, unit: 'V', label: 'Phase voltage' },
+  temp: { normal: 56, unit: '°C', label: 'Transformer temperature' },
+};
+
 // Evidence log — enriched with structured fields
+// impact: qualitative description of model effect, NOT a posterior-delta percentage
 export const initialEvidenceLog: EvidenceEvent[] = [
   {
     id: 'e1', timestamp: '14:22:15', type: 'sensor',
     title: 'Overcurrent Relay Tripped',
     location: 'Mulshi Substation',
     evidenceCategory: 'location', strength: 'very_strong',
-    impact: 'Section B +18%',
+    impact: 'Section B — location evidence',
     detail: 'Relay trip indicates fault downstream of substation',
   },
   {
     id: 'e2', timestamp: '14:22:18', type: 'meter',
-    title: 'Last-Gasp Signals Received',
+    title: 'Last-Gasp Signals',
     location: 'Kolvan (14 meters)',
     evidenceCategory: 'location', strength: 'strong',
-    impact: 'Section B +7%',
+    impact: 'Section B — location evidence',
     detail: 'Supports downstream fault affecting Kolvan supply',
   },
   {
     id: 'e3', timestamp: '14:22:20', type: 'meter',
-    title: 'Last-Gasp Signals Received',
+    title: 'Last-Gasp Signals',
     location: 'Bhira (8 meters)',
     evidenceCategory: 'location', strength: 'moderate',
-    impact: 'Section C +3%',
+    impact: 'Section C — location evidence',
     detail: 'Downstream propagation from fault in B or C',
   },
   {
     id: 'e4', timestamp: '14:23:01', type: 'sensor',
-    title: 'Voltage Collapse Detected',
+    title: 'Voltage Collapse',
     location: 'DTR-2 (63kVA)',
     evidenceCategory: 'location', strength: 'strong',
-    impact: 'Section B +9%',
+    impact: 'Section B — location evidence',
     detail: 'Matches Section B topology — fault likely upstream of DTR-2',
   },
   {
     id: 'e5', timestamp: '14:23:45', type: 'weather',
     title: 'High Wind Detected',
-    location: 'Pole 43–46',
+    location: 'Pole 43–46 corridor',
     evidenceCategory: 'cause', strength: 'strong',
-    impact: 'Vegetation contact +12%',
+    impact: 'Vegetation contact — cause evidence',
     detail: '47 km/h gusts raise vegetation-contact probability',
   },
   {
@@ -298,32 +323,32 @@ export const initialEvidenceLog: EvidenceEvent[] = [
     title: 'Consumer Complaints',
     location: 'Kolvan (3 reports)',
     evidenceCategory: 'location', strength: 'moderate',
-    impact: 'Section B +4%',
+    impact: 'Section B — location evidence',
     detail: 'Outage complaints confirm supply loss in Kolvan area',
   },
   {
     id: 'e7', timestamp: '14:25:00', type: 'sensor',
     title: 'Transformer Temperature Spike',
-    location: 'DTR-2 reading 89°C',
+    location: 'DTR-2 (89°C)',
     evidenceCategory: 'cause', strength: 'moderate',
-    impact: 'Transformer overload +5%',
+    impact: 'Transformer overload — cause evidence',
     detail: 'Temperature above normal operating range',
   },
   {
     id: 'e8', timestamp: '14:26:30', type: 'sensor',
     title: 'Current Near Zero',
-    location: 'Section B feeders',
+    location: 'Section B conductors',
     evidenceCategory: 'location', strength: 'strong',
-    impact: 'Section B +6%',
+    impact: 'Section B — location evidence',
     detail: 'Confirms loss of supply on Section B conductors',
   },
 ];
 
 // Evidence triggers matching belief history for annotation
 export const evidenceTriggers: Record<number, string> = {
-  0: 'Prior',
+  0: 'Uniform prior',
   1: 'Relay trip',
-  2: 'Last-gasp',
+  2: 'Last-gasp signals',
   3: 'Voltage collapse',
   4: 'Wind alert',
   5: 'Complaints',
@@ -332,25 +357,37 @@ export const evidenceTriggers: Record<number, string> = {
 };
 
 // Initial belief history (probability over time)
+// Timestamps anchored to scenario time (14:22–14:29) to match evidence log
 export function generateInitialBeliefHistory(): BeliefSnapshot[] {
   const snapshots: BeliefSnapshot[] = [];
-  const now = Date.now();
+
+  // 8 snapshots: uniform prior at 14:22, then one per major evidence event
+  const scenarioTimes = [
+    '14:22:00', // Uniform prior
+    '14:22:15', // Relay trip
+    '14:22:20', // Last-gasp signals
+    '14:23:01', // Voltage collapse
+    '14:23:45', // Wind alert
+    '14:24:12', // Complaints
+    '14:25:00', // Temp spike
+    '14:26:30', // Current near zero
+  ];
 
   // Simulate belief evolution: starts uncertain, converges on section B
   const trajectory = [
     { A: 0.33, B: 0.34, C: 0.33, trigger: 'Uniform prior' },
-    { A: 0.28, B: 0.42, C: 0.30, trigger: 'Relay trip +18%' },
-    { A: 0.20, B: 0.55, C: 0.25, trigger: 'Last-gasp +7%' },
-    { A: 0.15, B: 0.65, C: 0.20, trigger: 'Voltage collapse +9%' },
-    { A: 0.10, B: 0.75, C: 0.15, trigger: 'Wind alert +12%' },
-    { A: 0.07, B: 0.82, C: 0.11, trigger: 'Complaints +4%' },
-    { A: 0.05, B: 0.87, C: 0.08, trigger: 'Temp spike +5%' },
-    { A: 0.03, B: 0.91, C: 0.06, trigger: 'Current zero +6%' },
+    { A: 0.28, B: 0.42, C: 0.30, trigger: 'Relay trip' },
+    { A: 0.20, B: 0.55, C: 0.25, trigger: 'Last-gasp signals' },
+    { A: 0.15, B: 0.65, C: 0.20, trigger: 'Voltage collapse' },
+    { A: 0.10, B: 0.75, C: 0.15, trigger: 'Wind alert' },
+    { A: 0.07, B: 0.82, C: 0.11, trigger: 'Complaints' },
+    { A: 0.05, B: 0.87, C: 0.08, trigger: 'Temp spike' },
+    { A: 0.03, B: 0.91, C: 0.06, trigger: 'Current near zero' },
   ];
 
   trajectory.forEach((t, i) => {
     snapshots.push({
-      timestamp: new Date(now - (trajectory.length - 1 - i) * 60000).toISOString(),
+      timestamp: `${SCENARIO_DATE}T${scenarioTimes[i]}+05:30`,
       sections: { A: t.A, B: t.B, C: t.C },
       trigger: t.trigger,
     });
