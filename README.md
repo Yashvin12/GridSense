@@ -201,19 +201,19 @@ All timestamps — evidence log, belief history, telemetry, header — are ancho
 
 ## Roadmap
 
-### Immediate (Akshu — frontend integration)
+### Immediate 
 - [ ] Replace `mockData.ts` with `fetch()` calls to FastAPI endpoints
 - [ ] Add `VITE_USE_MOCK=true` env flag as fallback
 - [ ] Wire `FAULT FOUND` / `NO FAULT` buttons to `POST /api/crew/confirm`
 - [ ] WebSocket or polling for live telemetry feed
 
-### Next (Vinnu — engine integration)
+### Next 
 - [ ] Wire `BayesianInferenceEngine` into FastAPI endpoints
 - [ ] Add `POST /api/evidence/update` — accepts evidence, returns updated posteriors
 - [ ] Change-point detection (`ruptures`) on telemetry stream
 - [ ] OR-Tools crew route endpoint
 
-### Phase 2 (post-demo)
+### Phase 2 
 - [ ] Multi-crew support
 - [ ] Historical fault database and learning loop
 - [ ] Mobile crew app with GPS-triggered stop confirmation
