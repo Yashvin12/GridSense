@@ -1,0 +1,4 @@
+complaint_id,timestamp,village,section,description,source
+CMP-001,2026-08-08T14:24:12+05:30,Kolvan,B,Complete power outage since approximately 2:22 PM. All lights off.,mobile_app
+CMP-002,2026-08-08T14:25:45+05:30,Kolvan,B,No electricity in entire colony. Water pump also stopped working.,helpline_1912
+CMP-003,2026-08-08T14:26:58+05:30,Kolvan,B,"Loud bang heard near the transformer around 2:22 PM, then power cut.",mobile_app
