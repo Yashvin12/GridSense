@@ -54,3 +54,8 @@ pip-delete-this-directory.txt
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local text briefs
+[iI]nnovate4Impact.txt
+[iI]novate4Impact.txt
+

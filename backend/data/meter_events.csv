@@ -1,0 +1,4 @@
+timestamp,village_id,village_name,meter_count,event_type,node_id,section
+2026-08-08T14:22:18+05:30,V_B,Kolvan,14,last_gasp,T2,B
+2026-08-08T14:22:20+05:30,V_C,Bhira,8,last_gasp,T3,C
+2026-08-08T14:24:00+05:30,V_A,Tamhini,11,heartbeat,T1,A
