@@ -1,0 +1,49 @@
+# GridSense Backend — Python Dependencies
+# Tested on Python 3.12
+#
+# NOTE — ortools protobuf:
+#   ortools==9.10.4067 requires protobuf>=5.26.1
+#   pgmpy has NO direct protobuf dependency — pip resolves freely
+#   Do NOT add a protobuf pin here; let pip pick the right version
+#
+# Install inside a venv:
+#   py -3.12 -m venv venv
+#   venv\Scripts\activate
+#   pip install -r requirements.txt
+
+# ── Graph layer ─────────────────────────────────────────────────────────────
+networkx>=3.3
+
+# ── Bayesian inference ──────────────────────────────────────────────────────
+pgmpy>=0.1.26
+
+# ── Change-point / anomaly detection ────────────────────────────────────────
+ruptures>=1.1.9
+river>=0.21.0
+
+# ── Route optimisation ──────────────────────────────────────────────────────
+# Pinned to 9.10 — last release that uses protobuf 4.x (not 6.x)
+# Do NOT upgrade to >= 9.11 without also upgrading pgmpy to a protobuf-6 release
+ortools==9.10.4067
+
+# ── Data & GIS ──────────────────────────────────────────────────────────────
+numpy>=1.26,<3              # pgmpy + scipy compatibility ceiling
+pandas>=2.2.0,<3
+geopandas>=1.0.0
+shapely>=2.0.0
+
+# ── Web framework (teammate's work) ─────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+
+# ── Database (teammate's work) ───────────────────────────────────────────────
+psycopg2-binary>=2.9.9
+sqlalchemy>=2.0.0
+
+# ── API integrations ────────────────────────────────────────────────────────
+httpx>=0.27.0               # async HTTP for OpenWeather
+
+# ── Testing ─────────────────────────────────────────────────────────────────
+pytest>=8.2.0
+pytest-asyncio>=0.23.0

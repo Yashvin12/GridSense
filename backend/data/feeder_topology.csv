@@ -1,0 +1,21 @@
+id,type,label,lat,lng,section,powered
+SS1,substation,Mulshi 33kV Substation,18.5120,73.4680,source,true
+P40,pole,Pole 40,18.5095,73.4720,A,true
+P41,pole,Pole 41,18.5070,73.4755,A,true
+T1,transformer,DTR-1 (25kVA),18.5068,73.4760,A,true
+P42,pole,Pole 42,18.5048,73.4790,A,true
+SW1,switch,Switch S1,18.5045,73.4795,A,true
+P43,pole,Pole 43,18.5020,73.4830,B,false
+P44,pole,Pole 44,18.4995,73.4865,B,false
+T2,transformer,DTR-2 (63kVA),18.4993,73.4870,B,false
+P45,pole,Pole 45,18.4970,73.4900,B,false
+SW2,switch,Switch S2,18.4968,73.4905,B,false
+P46,pole,Pole 46,18.4945,73.4935,B,false
+P47,pole,Pole 47,18.4920,73.4965,C,false
+T3,transformer,DTR-3 (100kVA),18.4918,73.4970,C,false
+P48,pole,Pole 48,18.4895,73.5000,C,false
+P49,pole,Pole 49,18.4870,73.5030,C,false
+SW3,switch,Tie Switch T4,18.4868,73.5035,C,false
+V_A,village,Tamhini,18.5060,73.4780,A,true
+V_B,village,Kolvan,18.4980,73.4890,B,false
+V_C,village,Bhira,18.4900,73.5010,C,false
