@@ -49,12 +49,25 @@ uvicorn app.main:app --reload
 
 Four views, each focused on a specific operational task:
 
-| View | Purpose |
-|------|---------| 
-| **Overview** | Fault location · Posterior probability · Evidence chain · Impact · Recommended switching |
-| **Evidence** | Belief evolution chart · Full evidence log · Live telemetry with anomaly interpretation |
-| **Crew Dispatch** | Prioritised inspection route · Fault confirmation · Belief update feedback |
-| **Cause Analysis** | Fault cause posterior · Supporting evidence strength · Competing hypotheses · Sensitivity |
+### 1. Dashboard (Overview)
+Fault location · Posterior probability · Evidence chain · Impact · Recommended switching
+
+![Dashboard view](docs/assets/dashboard_view.png)
+
+### 2. Evidence
+Belief evolution chart · Full evidence log · Live telemetry with anomaly interpretation
+
+![Evidence view](docs/assets/evidence_view.png)
+
+### 3. Crew Dispatch
+Prioritised inspection route · Fault confirmation · Belief update feedback
+
+![Crew view](docs/assets/crew_view.png)
+
+### 4. Cause Analysis
+Fault cause posterior · Supporting evidence strength · Competing hypotheses · Sensitivity
+
+![Causes view](docs/assets/causes_view_zoomedout.png)
 
 ### Design principles
 
@@ -172,6 +185,12 @@ Supporting evidence: high wind along the Pole 43–46 corridor (very strong), fa
 ---
 
 ## Key Implementation Notes
+
+### Recent Refinement Pass
+The system recently underwent a comprehensive refinement pass to improve data semantics and UI coherence across the application. Key improvements implemented include:
+- **Data Semantics:** Replaced ambiguous percentage contributions with qualitative strength labels (e.g., `very_strong`) and descriptive impacts to reflect honest Bayesian reasoning.
+- **Time Synchronization:** Anchored belief chart timestamps and evidence logs to the consistent scenario timeline (`14:22–14:26`).
+- **Component Polish:** Removed redundant nested panels, enforced strict semantic color usage, applied explicit labeling for posterior/cause probabilities, and refined the FeederMap GIS labels.
 
 ### Bayesian Engine
 
