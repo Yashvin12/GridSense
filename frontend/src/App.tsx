@@ -26,12 +26,12 @@ function AppContent() {
         className="h-screen"
         style={{
           marginLeft: 52,
-          paddingTop: 40,
-          padding: '40px 6px 6px 6px',
+          paddingTop: 36,
+          padding: '36px 6px 6px 6px',
           marginTop: 0,
         }}
       >
-        <div style={{ height: 'calc(100vh - 46px)' }}>
+        <div style={{ height: 'calc(100vh - 42px)' }}>
           {viewComponents[state.activeView]}
         </div>
       </main>

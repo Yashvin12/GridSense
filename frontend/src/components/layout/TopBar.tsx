@@ -1,4 +1,5 @@
-// TopBar — system status bar: branding + fault state + belief update time
+// TopBar — SCADA system operational header
+// High density telemetry status bar with semantic alert hierarchy
 
 import { useGrid } from '../../context/GridContext';
 import { StatusDot } from '../shared/StatusDot';
@@ -13,14 +14,14 @@ export function TopBar() {
     return () => clearInterval(interval);
   }, []);
 
-  const formattedTime = time.toLocaleTimeString('en-IN', {
+  const formattedTime = time.toLocaleTimeString('en-US', {
+    hour12: false,
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
   });
 
-  const viewLabels: Record<string, string> = {
+  const viewBreadcrumbs: Record<string, string> = {
     dashboard: 'Overview',
     evidence: 'Evidence',
     crew: 'Crew Dispatch',
@@ -29,66 +30,69 @@ export function TopBar() {
 
   return (
     <header
-      className="fixed top-0 left-[52px] right-0 h-10 flex items-center justify-between px-4 z-30"
+      className="fixed top-0 left-[52px] right-0 h-9 flex items-center justify-between px-3 z-30 select-none"
       style={{
         backgroundColor: '#0d1117',
         borderBottom: '1px solid var(--gs-border)',
       }}
     >
-      {/* Left: branding + view name */}
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold tracking-wide" style={{ color: 'var(--gs-text)' }}>
-          GRIDSENSE
+      {/* Left: Quiet Brand + High Contrast Breadcrumb */}
+      <div className="flex items-center gap-2 font-mono text-[11px]">
+        <span className="font-semibold tracking-wider" style={{ color: 'var(--gs-text-tertiary)' }}>
+          GRID SENSE
         </span>
-        <span style={{ color: 'var(--gs-text-tertiary)', fontSize: 10 }}>/</span>
-        <span className="text-xs font-medium" style={{ color: 'var(--gs-text-secondary)' }}>
-          {viewLabels[state.activeView]}
+        <span style={{ color: 'var(--gs-border-strong)' }}>/</span>
+        <span className="font-semibold tracking-wide" style={{ color: 'var(--gs-text)' }}>
+          {viewBreadcrumbs[state.activeView]}
         </span>
       </div>
 
-      {/* Right: operational status */}
-      <div className="flex items-center gap-4">
-        {/* Active fault indicator */}
-        <div className="flex items-center gap-1.5">
+      {/* Right: Operational Status Hierarchy */}
+      <div className="flex items-center gap-3 text-[11px]">
+        {/* 1. PRIMARY STORY: ACTIVE FAULT INDICATOR */}
+        <div
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm border"
+          style={{
+            backgroundColor: 'rgba(248, 81, 73, 0.12)',
+            borderColor: 'rgba(248, 81, 73, 0.4)',
+          }}
+        >
           <StatusDot status="affected" size="sm" pulse />
-          <span className="text-[11px] font-medium" style={{ color: 'var(--gs-red)' }}>
-            ACTIVE FAULT
+          <span className="font-mono font-semibold tracking-wide uppercase text-[10px]" style={{ color: 'var(--gs-red)' }}>
+            ACTIVE FAULT: {state.fault.section}
           </span>
         </div>
 
-        {/* Separator */}
-        <span style={{ color: 'var(--gs-border)', fontSize: 11 }}>|</span>
+        <span style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
 
-        {/* Live indicator */}
+        {/* 2. LIVE Connection state */}
         <div className="flex items-center gap-1.5">
           <StatusDot status="powered" size="sm" />
-          <span className="text-[11px]" style={{ color: 'var(--gs-text-tertiary)' }}>LIVE</span>
+          <span className="font-mono text-[10px] tracking-wide uppercase" style={{ color: 'var(--gs-text-secondary)' }}>
+            LIVE
+          </span>
         </div>
 
-        {/* Separator */}
-        <span style={{ color: 'var(--gs-border)', fontSize: 11 }}>|</span>
+        <span style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
 
-        {/* Belief update status */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px]" style={{ color: 'var(--gs-text-tertiary)' }}>
-            BELIEF UPDATED
-          </span>
-          <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--gs-text-secondary)' }}>
+        {/* 3. Bayesian Belief Update telemetry */}
+        <div className="flex items-center gap-1 font-mono text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+          <span className="uppercase tracking-tight">BELIEF UPDATED:</span>
+          <span className="tabular-nums" style={{ color: 'var(--gs-text-secondary)' }}>
             {state.lastBeliefUpdate}
           </span>
-          <span className="text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
-            · {state.evidenceCount} updates
-          </span>
+          <span>·</span>
+          <span>{state.evidenceCount} updates</span>
         </div>
 
-        {/* Separator */}
-        <span style={{ color: 'var(--gs-border)', fontSize: 11 }}>|</span>
+        <span style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
 
-        {/* Clock */}
-        <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--gs-text-tertiary)' }}>
-          {formattedTime}
-        </span>
+        {/* 4. Real-time System Clock */}
+        <div className="font-mono text-[11px] tabular-nums font-medium" style={{ color: 'var(--gs-text-secondary)' }}>
+          {formattedTime} UTC
+        </div>
       </div>
     </header>
   );
 }
+

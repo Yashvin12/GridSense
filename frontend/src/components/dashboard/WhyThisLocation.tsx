@@ -11,7 +11,7 @@ export function WhyThisLocation() {
   // Show top location evidence items only — cause evidence belongs in Cause Analysis
   const locationEvidence = evidenceLog
     .filter((e) => e.evidenceCategory === 'location' && e.type !== 'crew')
-    .slice(0, 4);
+    .slice(0, 3);
 
   const strengthColors: Record<string, string> = {
     very_strong: 'var(--gs-red)',
@@ -20,36 +20,27 @@ export function WhyThisLocation() {
     weak: 'var(--gs-text-tertiary)',
   };
 
-  const strengthLabels: Record<string, string> = {
-    very_strong: 'Very strong',
-    strong: 'Strong',
-    moderate: 'Moderate',
-    weak: 'Weak',
-  };
-
   return (
     <div>
-      <div className="gs-section-label mb-2">Why this location?</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="gs-section-label text-[10px] mb-3">Why this location</div>
+      <div className="flex flex-col gap-3 pl-1 border-l border-dashed border-[var(--gs-border)] ml-1">
         {locationEvidence.map((ev) => (
-          <div key={ev.id}>
-            {/* Evidence source + location */}
-            <div className="text-xs font-medium text-[var(--gs-text)] leading-tight">
+          <div key={ev.id} className="pl-3 relative">
+            {/* Visual connector node */}
+            <div className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-[var(--gs-bg)] border border-[var(--gs-border-strong)]" />
+            
+            <div className="text-[12px] font-medium text-[var(--gs-text)] leading-tight mb-0.5">
               {ev.title}
             </div>
-            <div className="text-[10px] mt-0.5" style={{ color: 'var(--gs-text-tertiary)' }}>
+            <div className="text-[11px] mb-1.5" style={{ color: 'var(--gs-text-secondary)' }}>
               {ev.location}
             </div>
-            {/* Strength + implied section */}
-            <div className="flex items-center gap-1 mt-0.5">
-              <span
-                className="text-[10px] font-semibold"
-                style={{ color: strengthColors[ev.strength] }}
-              >
-                {strengthLabels[ev.strength]}
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[9px] uppercase font-bold tracking-wider" style={{ color: strengthColors[ev.strength] }}>
+                {ev.strength.replace('_', ' ')}
               </span>
               <span style={{ color: 'var(--gs-text-tertiary)', fontSize: 10 }}>→</span>
-              <span className="text-[10px] font-mono" style={{ color: 'var(--gs-text-secondary)' }}>
+              <span className="font-mono text-[9px] uppercase font-semibold" style={{ color: 'var(--gs-text)' }}>
                 Section B
               </span>
             </div>

@@ -3,130 +3,147 @@
 
 import { useGrid } from '../../context/GridContext';
 import { AnimatedNumber } from '../shared/AnimatedNumber';
-import { StatusDot } from '../shared/StatusDot';
 import { WhyThisLocation } from './WhyThisLocation';
 
 export function FaultSummaryPanel() {
   const { state } = useGrid();
-  const { fault, affectedVillages, switchingPlan, causes } = state;
+  const { fault, affectedVillages, switchingPlan, causes, sectionProbabilities } = state;
 
   const topCause = causes[0];
+  const sortedProbs = [...sectionProbabilities].sort((a, b) => b.probability - a.probability);
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto custom-scrollbar" style={{ gap: 0 }}>
+    <div className="h-full flex flex-col overflow-y-auto custom-scrollbar bg-[var(--gs-bg)]">
 
-      {/* ═══════ 1. Fault Identity ═══════ */}
-      <div className="px-3 pt-3 pb-2">
-        {/* Feeder/circuit identifier */}
-        <div className="gs-section-label mb-2" style={{ color: 'var(--gs-text-tertiary)' }}>
-          Mulshi 33kV — Feeder 1
-        </div>
-
-        {/* Fault zone */}
-        <div className="text-base font-semibold text-[var(--gs-text)] leading-tight">
+      {/* ═══════ LEVEL 1 — DIAGNOSIS ═══════ */}
+      <div className="px-5 pt-6 pb-4">
+        {/* Fault location */}
+        <div className="text-[22px] font-bold tracking-tight text-[var(--gs-text)] leading-tight mb-1">
           {fault.section}
         </div>
-        <div className="text-[11px] mt-0.5" style={{ color: 'var(--gs-text-tertiary)' }}>
-          Section B · Offline
+        <div className="font-mono text-[11px] font-semibold text-[var(--gs-red)] mb-6">
+          Section B
         </div>
 
-        {/* 2. Posterior probability — primary number */}
-        <div className="mt-3">
-          <AnimatedNumber
-            value={fault.confidence * 100}
-            suffix="%"
-            decimals={0}
-            className="text-3xl font-bold"
-          />
-          <div className="gs-section-label mt-0.5" style={{ color: 'var(--gs-red)' }}>
-            Posterior probability of fault
+        {/* Posterior probability — strongest element, operational styling */}
+        <div className="flex items-baseline gap-1">
+          <div className="font-mono text-5xl font-semibold tracking-tighter text-[var(--gs-text)]">
+            <AnimatedNumber value={fault.confidence * 100} decimals={0} />
+          </div>
+          <span className="font-mono text-2xl font-semibold text-[var(--gs-text-tertiary)]">%</span>
+        </div>
+        
+        {/* Confidence bar — flat track, no rounding */}
+        <div className="mt-2 flex items-center gap-3">
+          <div className="h-[3px] flex-1 overflow-hidden" style={{ backgroundColor: 'var(--gs-surface-3)' }}>
+             <div className="h-full" style={{ width: `${fault.confidence * 100}%`, backgroundColor: 'var(--gs-red)' }} />
+          </div>
+          <div className="gs-section-label !text-[9px] tracking-widest whitespace-nowrap" style={{ color: 'var(--gs-text-secondary)' }}>
+            POSTERIOR PROBABILITY OF FAULT
           </div>
         </div>
       </div>
 
-      <div className="gs-divider mx-3" />
+      <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
 
-      {/* ═══════ 3. WHY THIS LOCATION? ═══════ */}
-      <div className="px-3 py-2">
+      {/* ═══════ LEVEL 2 — WHY THIS LOCATION? ═══════ */}
+      <div className="px-5 py-3">
         <WhyThisLocation />
       </div>
 
-      <div className="gs-divider mx-3" />
+      <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
 
-      {/* ═══════ 4. Probable Cause ═══════ */}
-      <div className="px-3 py-2">
-        <div className="gs-section-label mb-1.5">Probable cause</div>
-        <div className="text-sm font-semibold text-[var(--gs-text)]">
-          {topCause.label}
-        </div>
-        <div className="flex items-baseline gap-2 mt-1">
-          <span className="font-mono text-base font-bold tabular-nums" style={{ color: 'var(--gs-amber)' }}>
-            <AnimatedNumber value={topCause.probability * 100} suffix="%" decimals={0} className="text-base font-bold" />
-          </span>
-          <span className="gs-section-label" style={{ color: 'var(--gs-text-tertiary)' }}>
-            cause probability
-          </span>
+      {/* ═══════ LEVEL 3 — SECTION PROBABILITIES ═══════ */}
+      <div className="px-5 py-3">
+        <div className="gs-section-label mb-3 text-[10px]">Section Probabilities</div>
+        <div className="flex flex-col gap-2">
+          {sortedProbs.map((sp) => (
+            <div key={sp.section} className="flex items-center gap-3">
+              <span className="font-mono text-[11px] font-medium w-3" style={{ color: sp.probability > 0.5 ? 'var(--gs-text)' : 'var(--gs-text-tertiary)' }}>
+                {sp.section}
+              </span>
+              <div className="h-[3px] flex-1 overflow-hidden" style={{ backgroundColor: 'var(--gs-surface-3)' }}>
+                <div 
+                  className="h-full" 
+                  style={{ 
+                    width: `${sp.probability * 100}%`,
+                    backgroundColor: sp.probability > 0.5 ? 'var(--gs-red)' : 'var(--gs-text-tertiary)',
+                  }} 
+                />
+              </div>
+              <span className="font-mono text-[10px] tabular-nums w-8 text-right" style={{ color: sp.probability > 0.5 ? 'var(--gs-text)' : 'var(--gs-text-tertiary)' }}>
+                {Math.round(sp.probability * 100)}%
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="gs-divider mx-3" />
+      <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
 
-      {/* ═══════ 5. Impact ═══════ */}
-      <div className="px-3 py-2">
-        <div className="gs-section-label mb-1.5">Impact</div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-base font-bold tabular-nums" style={{ color: 'var(--gs-red)' }}>
+      {/* ═══════ LEVEL 4 — PROBABLE CAUSE ═══════ */}
+      <div className="px-5 py-3 flex items-center justify-between">
+        <div>
+          <div className="gs-section-label text-[10px] mb-1">Probable cause</div>
+          <div className="text-[13px] font-medium text-[var(--gs-text)]">
+            {topCause.label}
+          </div>
+        </div>
+        <div className="font-mono text-[15px] font-semibold" style={{ color: 'var(--gs-amber)' }}>
+          <AnimatedNumber value={topCause.probability * 100} decimals={0} />%
+        </div>
+      </div>
+
+      <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
+
+      {/* ═══════ LEVEL 5 — IMPACT ═══════ */}
+      <div className="px-5 py-3">
+        <div className="gs-section-label text-[10px] mb-2">Impact</div>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-mono text-[13px] font-bold tabular-nums" style={{ color: 'var(--gs-red)' }}>
             {affectedVillages.length}
           </span>
-          <span className="text-xs" style={{ color: 'var(--gs-text-secondary)' }}>
+          <span className="text-[12px] font-medium" style={{ color: 'var(--gs-text-secondary)' }}>
             villages without supply
           </span>
         </div>
-        <div className="mt-1.5 space-y-1">
+        <div className="flex flex-col gap-1 pl-1">
           {affectedVillages.map((v) => (
-            <div key={v} className="flex items-center gap-1.5 text-xs">
-              <StatusDot status="affected" size="sm" />
-              <span style={{ color: 'var(--gs-text-secondary)' }}>{v}</span>
+            <div key={v} className="flex items-center gap-2 text-[11px] font-mono">
+              <span className="text-[8px]" style={{ color: 'var(--gs-red)' }}>●</span>
+              <span style={{ color: 'var(--gs-text)' }}>{v}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="gs-divider mx-3" />
+      <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
 
-      {/* ═══════ 6. Recommended Actions ═══════ */}
-      <div className="px-3 py-2 pb-3">
-        <div className="gs-section-label mb-2">Recommended actions</div>
-        <div className="space-y-1.5">
-          {switchingPlan.map((step, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <span
-                className="flex items-center justify-center w-[18px] h-[18px] text-[10px] font-bold font-mono shrink-0 mt-px"
-                style={{
-                  backgroundColor: 'var(--gs-surface-3)',
-                  borderRadius: 2,
-                  color: step.status === 'completed' ? 'var(--gs-green)' : 'var(--gs-text-secondary)',
-                }}
-              >
-                {i + 1}
-              </span>
-              <span className="text-xs leading-snug" style={{ color: 'var(--gs-text-secondary)' }}>
-                {step.action}
-              </span>
-              <span className="text-[9px] font-mono ml-auto shrink-0"
-                style={{
-                  color: step.status === 'recommended' ? 'var(--gs-amber)' :
-                         step.status === 'completed' ? 'var(--gs-green)' :
-                         step.status === 'blocked' ? 'var(--gs-red)' :
-                         'var(--gs-text-tertiary)',
-                }}
-              >
-                {step.status.toUpperCase()}
-              </span>
-            </div>
-          ))}
+      {/* ═══════ LEVEL 6 — RECOMMENDED ACTIONS ═══════ */}
+      <div className="px-5 pt-3 pb-8">
+        <div className="gs-section-label text-[10px] mb-3">Recommended actions</div>
+        <div className="flex flex-col gap-2.5">
+          {switchingPlan.map((step, i) => {
+            const isRec = step.status === 'recommended';
+            const isCompleted = step.status === 'completed';
+            return (
+              <div key={i} className="flex items-baseline gap-3">
+                <span className="font-mono text-[10px] tabular-nums" style={{ color: 'var(--gs-text-tertiary)' }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span className="text-[12px] flex-1 leading-snug font-medium" style={{ color: isCompleted ? 'var(--gs-text-tertiary)' : 'var(--gs-text)', textDecoration: isCompleted ? 'line-through' : 'none' }}>
+                  {step.action}
+                </span>
+                <span className="font-mono text-[9px] uppercase font-semibold tracking-wider" 
+                  style={{ color: isRec ? 'var(--gs-amber)' : isCompleted ? 'var(--gs-green)' : 'var(--gs-text-tertiary)' }}>
+                  {step.status}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
+
     </div>
   );
 }

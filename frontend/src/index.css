@@ -96,19 +96,25 @@ html, body, #root {
   background: rgba(110, 118, 129, 0.45);
 }
 
-/* ---- Evidence new item transition ---- */
+/* ---- Evidence new item entrance — communicates new evidence entered reasoning ---- */
+/* Applied only to newest item when evidenceCount increments (not on initial render) */
 .evidence-enter {
-  animation: evidence-slide 0.4s ease-out;
+  animation: evidence-enter-anim 0.35s ease-out;
 }
 
-@keyframes evidence-slide {
+@keyframes evidence-enter-anim {
   0% {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-6px);
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    background-color: transparent;
   }
 }
 
