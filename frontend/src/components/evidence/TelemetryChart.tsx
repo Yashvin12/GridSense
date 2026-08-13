@@ -7,7 +7,7 @@ import { useGrid } from '../../context/GridContext';
 import { telemetryBaselines } from '../../data/mockData';
 
 // Compute contextual status string for a reading relative to baseline
-function getDeviation(value: number, baseline: number, unit: string): { label: string; color: string } {
+function getDeviation(value: number, baseline: number, _unit: string): { label: string; color: string } {
   const pct = ((value - baseline) / baseline) * 100;
   const absPct = Math.abs(pct);
 

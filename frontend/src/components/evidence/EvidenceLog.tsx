@@ -3,6 +3,7 @@
 // Vertical rail communicates chronological flow through the reasoning system.
 // New evidence enters at top. Strength uses semantic color. Source = plain text label.
 // No individual cards — proximity and rail define grouping.
+// Full mode: each event shows before→after belief change for Section B.
 
 import { useGrid } from '../../context/GridContext';
 
@@ -38,13 +39,47 @@ const sourceTypeStyle: Record<string, { label: string; color: string }> = {
   complaint: { label: 'COMPLAINT', color: 'rgba(248,81,73,0.7)'     },
 };
 
+// Trigger label → belief snapshot trigger key mapping
+// Evidence timestamps are matched to beliefHistory triggers in order
+const EVIDENCE_TRIGGER_ORDER = [
+  'Relay trip',
+  'Last-gasp signals',
+  'Voltage collapse',
+  'Wind alert',
+  'Complaints',
+  'Temp spike',
+  'Current zero',
+];
+
 export function EvidenceLog({ compact = false }: { compact?: boolean }) {
   const { state } = useGrid();
-  const { evidenceLog, evidenceCount } = state;
+  const { evidenceLog, evidenceCount, beliefHistory } = state;
 
   const items = compact ? evidenceLog.slice(0, 7) : evidenceLog;
   // The latest event is always index 0 (newest first)
   const latestId = items[0]?.id;
+
+  // Build before→after belief map for Section B using beliefHistory snapshots
+  // evidenceLog is newest-first; beliefHistory is oldest-first
+  // We match belief snapshots by index: snapshot[0] = uniform prior, snapshot[1] = after event 1, etc.
+  // Evidence items are in reverse order, so we correlate by trigger order
+  const beliefDeltas: Map<string, { before: number; after: number; delta: number }> = new Map();
+  if (!compact && beliefHistory.length > 1) {
+    // Build deltas for each evidence trigger
+    EVIDENCE_TRIGGER_ORDER.forEach((triggerKey, triggerIdx) => {
+      const snapshotBefore = beliefHistory[triggerIdx];       // belief before this evidence
+      const snapshotAfter  = beliefHistory[triggerIdx + 1];  // belief after this evidence
+      if (snapshotBefore && snapshotAfter) {
+        const before = snapshotBefore.sections['B'] ?? 0;
+        const after  = snapshotAfter.sections['B'] ?? 0;
+        beliefDeltas.set(triggerKey, {
+          before: Math.round(before * 100),
+          after:  Math.round(after * 100),
+          delta:  Math.round((after - before) * 100),
+        });
+      }
+    });
+  }
 
   return (
     <div className="h-full flex flex-col" style={{ padding: 0 }}>
@@ -224,39 +259,85 @@ export function EvidenceLog({ compact = false }: { compact?: boolean }) {
                     </span>
                   </div>
 
-                  {/* Row 4: MODEL EFFECT — always visible; compact shows truncated */}
-                  {!compact && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        marginTop: 1,
-                      }}
-                    >
-                      {/* Arrow — communicates "this evidence updated the posterior" */}
-                      <span
-                        className="font-mono"
+                  {/* Row 4: MODEL EFFECT — full mode shows structured before→after belief update */}
+                  {!compact && (() => {
+                    // Match this evidence item to a trigger in beliefHistory by order
+                    // evidenceLog is newest-first; we need to find its reverse index
+                    const reverseIdx = items.length - 1 - i;
+                    const triggerKey = EVIDENCE_TRIGGER_ORDER[reverseIdx];
+                    const delta = triggerKey ? beliefDeltas.get(triggerKey) : undefined;
+
+                    if (delta && delta.delta !== 0) {
+                      return (
+                        <div
+                          style={{
+                            marginTop: 5,
+                            padding: '5px 8px',
+                            backgroundColor: 'rgba(255,255,255,0.03)',
+                            borderRadius: 2,
+                          }}
+                        >
+                          {/* Location label */}
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: 'var(--gs-text-tertiary)',
+                              marginBottom: 2,
+                              fontFamily: 'IBM Plex Mono, monospace',
+                            }}
+                          >
+                            {event.impact}
+                          </div>
+                          {/* Before → After → Delta */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span
+                              className="font-mono tabular-nums"
+                              style={{ fontSize: 11, color: 'var(--gs-text-secondary)' }}
+                            >
+                              {delta.before}%
+                            </span>
+                            <span style={{ fontSize: 10, color: 'var(--gs-text-tertiary)' }}>→</span>
+                            <span
+                              className="font-mono tabular-nums font-semibold"
+                              style={{
+                                fontSize: 11,
+                                color: delta.delta > 5 ? 'var(--gs-text)' : 'var(--gs-text-secondary)',
+                              }}
+                            >
+                              {delta.after}%
+                            </span>
+                            <span
+                              className="font-mono tabular-nums"
+                              style={{
+                                fontSize: 10,
+                                color: delta.delta > 0 ? 'var(--gs-amber)' : 'var(--gs-text-tertiary)',
+                                marginLeft: 2,
+                              }}
+                            >
+                              {delta.delta > 0 ? `+${delta.delta}` : delta.delta} pts
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Fallback: show the qualitative impact string
+                    return (
+                      <div
                         style={{
-                          fontSize: 10,
-                          color: 'var(--gs-text-tertiary)',
-                          userSelect: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          marginTop: 3,
                         }}
                       >
-                        →
-                      </span>
-                      <span
-                        className="font-mono"
-                        style={{
-                          fontSize: 10,
-                          color: 'var(--gs-text-tertiary)',
-                          letterSpacing: '0.01em',
-                        }}
-                      >
-                        {event.impact}
-                      </span>
-                    </div>
-                  )}
+                        <span className="font-mono" style={{ fontSize: 10, color: 'var(--gs-text-tertiary)' }}>→</span>
+                        <span className="font-mono" style={{ fontSize: 10, color: 'var(--gs-text-tertiary)', letterSpacing: '0.01em' }}>
+                          {event.impact}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   {compact && (
                     <div
                       style={{

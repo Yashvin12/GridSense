@@ -20,6 +20,14 @@ export function WhyThisLocation() {
     weak: 'var(--gs-text-tertiary)',
   };
 
+  // Sentence-case labels — not ALL-CAPS terminal style
+  const strengthLabels: Record<string, string> = {
+    very_strong: 'Very strong',
+    strong: 'Strong',
+    moderate: 'Moderate',
+    weak: 'Weak',
+  };
+
   return (
     <div>
       <div className="gs-section-label text-[10px] mb-3">Why this location</div>
@@ -36,11 +44,14 @@ export function WhyThisLocation() {
               {ev.location}
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="font-mono text-[9px] uppercase font-bold tracking-wider" style={{ color: strengthColors[ev.strength] }}>
-                {ev.strength.replace('_', ' ')}
+              <span
+                className="font-mono text-[10px]"
+                style={{ color: strengthColors[ev.strength] }}
+              >
+                {strengthLabels[ev.strength] || ev.strength}
               </span>
-              <span style={{ color: 'var(--gs-text-tertiary)', fontSize: 10 }}>→</span>
-              <span className="font-mono text-[9px] uppercase font-semibold" style={{ color: 'var(--gs-text)' }}>
+              <span style={{ color: 'var(--gs-border-strong)', fontSize: 10 }}>·</span>
+              <span className="font-mono text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
                 Section B
               </span>
             </div>

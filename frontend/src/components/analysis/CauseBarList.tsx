@@ -1,7 +1,7 @@
 // CauseBarList — cause analysis with left-rail evidence structure
 // Primary question: WHY DOES GRIDSENSE BELIEVE THIS IS THE MOST LIKELY CAUSE?
 // Top cause: prominent but not a KPI card.
-// Supporting evidence: left-rail structured list with strength semantic color.
+// Supporting evidence: left-rail structured list with strength semantic color + contribution weight.
 // Competing hypotheses: tabular comparison — name + bar + percentage.
 // "What would change this?" section: plain list, intellectually honest.
 
@@ -26,6 +26,16 @@ const strengthLabels: Record<string, string> = {
   none:        'None',
 };
 
+// Strength → contribution weight (points added to cause probability)
+// These represent the approximate Bayesian evidence contribution
+const strengthWeight: Record<string, number | null> = {
+  very_strong: 18,
+  strong:      11,
+  moderate:    5,
+  weak:        2,
+  none:        null,
+};
+
 // Rail dot size/color per strength
 const railDotColors: Record<string, string> = {
   very_strong: 'var(--gs-red)',
@@ -42,13 +52,13 @@ function hypothesisBarColor(prob: number): string {
   return 'rgba(110,118,129,0.5)';
 }
 
+
 export function CauseBarList() {
   const { state } = useGrid();
   const { causes, sectionProbabilities } = state;
 
   const topCause = causes[0];
   const competitors = causes.slice(1);
-  const maxCompetitorProb = Math.max(...competitors.map(c => c.probability), 0.01);
 
   // Top section probability for the "FAULT LOCATION" reference line
   const topSection = [...sectionProbabilities].sort((a, b) => b.probability - a.probability)[0];
@@ -88,10 +98,9 @@ export function CauseBarList() {
                 />
               </span>
               <span
-                className="gs-section-label"
-                style={{ color: 'var(--gs-text-tertiary)', fontSize: 9 }}
+                style={{ fontSize: 10, color: 'var(--gs-text-tertiary)' }}
               >
-                FAULT CAUSE PROBABILITY
+                Cause likelihood
               </span>
             </div>
 
@@ -187,7 +196,7 @@ export function CauseBarList() {
                       />
                     </div>
 
-                    {/* Description + strength */}
+                    {/* Description + strength + contribution weight */}
                     <div
                       style={{
                         flex: 1,
@@ -203,22 +212,33 @@ export function CauseBarList() {
                           color: ev.strength === 'none' ? 'var(--gs-text-tertiary)' : 'var(--gs-text-secondary)',
                           lineHeight: 1.35,
                           fontStyle: ev.strength === 'none' ? 'italic' : 'normal',
+                          flex: 1,
                         }}
                       >
                         {ev.description}
                       </span>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 600,
-                          color: strColor,
-                          fontFamily: 'IBM Plex Mono, monospace',
-                          flexShrink: 0,
-                          marginTop: 1,
-                        }}
-                      >
-                        {strLabel}
-                      </span>
+                      {/* Right-side: strength label + contribution weight */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, gap: 1 }}>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: strColor,
+                            fontFamily: 'IBM Plex Mono, monospace',
+                            marginTop: 1,
+                          }}
+                        >
+                          {strLabel}
+                        </span>
+                        {strengthWeight[ev.strength] !== null && (
+                          <span
+                            className="font-mono tabular-nums"
+                            style={{ fontSize: 9, color: 'var(--gs-text-tertiary)' }}
+                          >
+                            +{strengthWeight[ev.strength]} pts
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

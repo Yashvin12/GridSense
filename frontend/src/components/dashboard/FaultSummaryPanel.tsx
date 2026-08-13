@@ -1,5 +1,6 @@
 // FaultSummaryPanel — primary fault state display
-// Visual hierarchy: fault location → posterior → why → cause → impact → actions
+// Visual hierarchy: fault location → confidence → WHAT TO DO → why → cause → impact → actions
+// First inspection target surfaced immediately after the confidence number.
 
 import { useGrid } from '../../context/GridContext';
 import { AnimatedNumber } from '../shared/AnimatedNumber';
@@ -7,10 +8,12 @@ import { WhyThisLocation } from './WhyThisLocation';
 
 export function FaultSummaryPanel() {
   const { state } = useGrid();
-  const { fault, affectedVillages, switchingPlan, causes, sectionProbabilities } = state;
+  const { fault, affectedVillages, switchingPlan, causes, sectionProbabilities, crewPlan } = state;
 
   const topCause = causes[0];
-  const sortedProbs = [...sectionProbabilities].sort((a, b) => b.probability - a.probability);
+  const topSection = [...sectionProbabilities].sort((a, b) => b.probability - a.probability)[0];
+  // First pending stop — the actionable field inspection target
+  const firstStop = crewPlan.find(s => s.status === 'pending');
 
   return (
     <div className="h-full flex flex-col overflow-y-auto custom-scrollbar bg-[var(--gs-bg)]">
@@ -18,30 +21,52 @@ export function FaultSummaryPanel() {
       {/* ═══════ LEVEL 1 — DIAGNOSIS ═══════ */}
       <div className="px-5 pt-6 pb-4">
         {/* Fault location */}
-        <div className="text-[22px] font-bold tracking-tight text-[var(--gs-text)] leading-tight mb-1">
+        <div className="text-[22px] font-bold tracking-tight text-[var(--gs-text)] leading-tight mb-0.5">
           {fault.section}
         </div>
-        <div className="font-mono text-[11px] font-semibold text-[var(--gs-red)] mb-6">
-          Section B
+        <div className="font-mono text-[11px] text-[var(--gs-text-secondary)] mb-5">
+          Section {topSection?.section || 'B'} · Fault zone
         </div>
 
-        {/* Posterior probability — strongest element, operational styling */}
+        {/* Fault likelihood — strongest element */}
         <div className="flex items-baseline gap-1">
           <div className="font-mono text-5xl font-semibold tracking-tighter text-[var(--gs-text)]">
             <AnimatedNumber value={fault.confidence * 100} decimals={0} />
           </div>
           <span className="font-mono text-2xl font-semibold text-[var(--gs-text-tertiary)]">%</span>
         </div>
-        
-        {/* Confidence bar — flat track, no rounding */}
-        <div className="mt-2 flex items-center gap-3">
-          <div className="h-[3px] flex-1 overflow-hidden" style={{ backgroundColor: 'var(--gs-surface-3)' }}>
-             <div className="h-full" style={{ width: `${fault.confidence * 100}%`, backgroundColor: 'var(--gs-red)' }} />
+
+        {/* Confidence bar */}
+        <div className="mt-2 mb-4">
+          <div className="h-[3px] w-full overflow-hidden" style={{ backgroundColor: 'var(--gs-surface-3)' }}>
+            <div className="h-full" style={{ width: `${fault.confidence * 100}%`, backgroundColor: 'var(--gs-red)' }} />
           </div>
-          <div className="gs-section-label !text-[9px] tracking-widest whitespace-nowrap" style={{ color: 'var(--gs-text-secondary)' }}>
-            POSTERIOR PROBABILITY OF FAULT
+          <div className="mt-1 text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
+            Fault likelihood
           </div>
         </div>
+
+        {/* First inspection target — answers WHAT TO DO immediately */}
+        {firstStop && (
+          <div
+            style={{
+              padding: '8px 10px',
+              backgroundColor: 'rgba(248,81,73,0.06)',
+              borderLeft: '2px solid rgba(248,81,73,0.5)',
+              borderRadius: '0 2px 2px 0',
+            }}
+          >
+            <div className="text-[9px] font-mono tracking-widest mb-1" style={{ color: 'var(--gs-text-tertiary)' }}>
+              INSPECT FIRST
+            </div>
+            <div className="text-[14px] font-semibold" style={{ color: 'var(--gs-text)' }}>
+              {firstStop.stop}
+            </div>
+            <div className="font-mono text-[10px] mt-0.5" style={{ color: 'var(--gs-text-tertiary)' }}>
+              {Math.round(firstStop.probability * 100)}% priority
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
@@ -52,32 +77,6 @@ export function FaultSummaryPanel() {
       </div>
 
       <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
-
-      {/* ═══════ LEVEL 3 — SECTION PROBABILITIES ═══════ */}
-      <div className="px-5 py-3">
-        <div className="gs-section-label mb-3 text-[10px]">Section Probabilities</div>
-        <div className="flex flex-col gap-2">
-          {sortedProbs.map((sp) => (
-            <div key={sp.section} className="flex items-center gap-3">
-              <span className="font-mono text-[11px] font-medium w-3" style={{ color: sp.probability > 0.5 ? 'var(--gs-text)' : 'var(--gs-text-tertiary)' }}>
-                {sp.section}
-              </span>
-              <div className="h-[3px] flex-1 overflow-hidden" style={{ backgroundColor: 'var(--gs-surface-3)' }}>
-                <div 
-                  className="h-full" 
-                  style={{ 
-                    width: `${sp.probability * 100}%`,
-                    backgroundColor: sp.probability > 0.5 ? 'var(--gs-red)' : 'var(--gs-text-tertiary)',
-                  }} 
-                />
-              </div>
-              <span className="font-mono text-[10px] tabular-nums w-8 text-right" style={{ color: sp.probability > 0.5 ? 'var(--gs-text)' : 'var(--gs-text-tertiary)' }}>
-                {Math.round(sp.probability * 100)}%
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <div className="mx-5 border-t border-[var(--gs-border)] opacity-60 my-1" />
 
