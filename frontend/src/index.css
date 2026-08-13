@@ -190,3 +190,58 @@ html, body, #root {
   font-size: 11px !important;
   line-height: 1.6 !important;
 }
+
+/* ------------------------------------------------------------------ */
+/* Login page — responsive layout                                      */
+/* ------------------------------------------------------------------ */
+
+/* Allow scroll on the login page (root is overflow:hidden for dashboard) */
+.gs-login-scroll {
+  overflow: auto !important;
+}
+
+/* Input focus state */
+.gs-input-focus:focus {
+  border-color: rgba(248, 81, 73, 0.5) !important;
+  outline: none;
+}
+
+/* Collapse left panel on tablet/mobile */
+@media (max-width: 768px) {
+  .gs-login-left {
+    display: none !important;
+  }
+  .gs-login-right {
+    flex: 1;
+    padding: 32px 20px !important;
+  }
+  .gs-auth-card {
+    max-width: 100% !important;
+    padding: 28px 20px !important;
+  }
+}
+
+/* Narrow left panel on small laptops */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .gs-login-left {
+    flex: 0 0 320px !important;
+    padding: 40px 28px !important;
+  }
+}
+
+/* Submit button hover */
+#gs-login-submit:not(:disabled):hover {
+  background-color: #e8413a !important;
+}
+
+/* Input focus ring — accessible */
+#gs-login-email:focus,
+#gs-login-password:focus {
+  border-color: rgba(248, 81, 73, 0.5) !important;
+  outline: none;
+}
+
+/* Forgot password hover */
+.gs-forgot-btn:hover {
+  color: var(--gs-text-secondary) !important;
+}
