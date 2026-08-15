@@ -19,6 +19,7 @@ Public API (what Akshu's Bayesian engine calls):
   - get_nodes_between_relay_and_village(relay_id, village_id) -> list[str]
   - get_affected_villages(fault_section) -> list[str]
   - get_switch_isolation_plan(fault_section) -> list[dict]
+  - get_dynamic_switching_plan(fault_section) -> list[dict]   [NEW — graph-driven]
   - graph_summary() -> dict
 """
 
@@ -342,43 +343,153 @@ def get_sections_on_path(relay_node: str, village_node: str) -> list[str]:
     return seen
 
 
+# ===========================================================================
+# Dynamic switching plan helpers
+# ===========================================================================
+
+def _compute_section_order() -> list[str]:
+    """
+    Return feeder sections ordered by distance from the substation using BFS
+    over the directed graph.
+
+    The returned order (e.g. ["A", "B", "C"]) determines which sections are
+    "upstream" and which are "downstream" of any given fault section.
+    """
+    seen: list[str] = []
+    visited: set[str] = set()
+    # Seed BFS from all substation nodes
+    queue: list[str] = [
+        nid for nid, data in _GRAPH.nodes(data=True)
+        if data.get("node_type") == "substation"
+    ]
+
+    while queue:
+        node = queue.pop(0)
+        if node in visited:
+            continue
+        visited.add(node)
+
+        sec = _GRAPH.nodes[node].get("section", "")
+        if sec and sec != "source" and sec not in seen:
+            seen.append(sec)
+
+        for successor in _GRAPH.successors(node):
+            if successor not in visited:
+                queue.append(successor)
+
+    return seen
+
+
+def _get_tail_switch_of_section(section: str) -> Optional[str]:
+    """
+    Return the topologically *last* switch node within the given section.
+
+    "Last" is defined by NetworkX topological sort on the directed feeder
+    graph — i.e. the switch node in that section which appears latest in
+    the power-flow direction (closest to the downstream section boundary).
+
+    Returns None if no switch exists in the section or the graph has cycles.
+    """
+    try:
+        topo: list[str] = list(nx.topological_sort(_GRAPH))
+    except nx.NetworkXUnfeasible:
+        return None
+
+    section = section.upper()
+    candidates = [
+        nid for nid in topo
+        if _GRAPH.nodes[nid].get("node_type") == "switch"
+        and _GRAPH.nodes[nid].get("section", "").upper() == section
+    ]
+    return candidates[-1] if candidates else None
+
+
 def get_switch_isolation_plan(fault_section: str) -> list[dict]:
     """
-    Return a recommended switching plan to isolate a faulted section and
-    restore downstream villages where possible.
+    Dynamically compute a switching plan by traversing the feeder graph.
 
-    Each step is a dict:
-        { "action": str, "switch": str, "operation": "open"|"close", "status": str }
+    Algorithm
+    ---------
+    1. Determine section order (upstream -> downstream) via BFS from substation.
+    2. Open the topologically-last switch in the fault section -- this isolates
+       the faulted zone from healthy downstream sections.
+    3. Close the topologically-last switch in the deepest downstream section
+       (the tie switch) -- restores downstream villages via an alternate feed.
+    4. Append pending restoration steps for villages inside the fault section
+       that require physical repair before power can be restored.
 
-    Feeds directly into the SwitchingStep[] the frontend already renders.
-
-    Example:
-        get_switch_isolation_plan("B")
-        -> [
-            {"action": "Open Switch S2",      "switch": "SW2", "operation": "open",  "status": "recommended"},
-            {"action": "Close Tie Switch T4", "switch": "SW3", "operation": "close", "status": "recommended"},
-            {"action": "Restore Bhira via alternate path", ...}
-        ]
+    Each step dict: { "action": str, "switch": str|None,
+                      "operation": "open"|"close"|None, "status": str }
     """
     fault_section = fault_section.upper()
+    section_order = _compute_section_order()
 
-    plans: dict[str, list[dict]] = {
-        "A": [
-            {"action": "Open Switch S1 (isolate Section A)",   "switch": "SW1", "operation": "open",  "status": "recommended"},
-            {"action": "Restore Section B via alternate feed", "switch": None,  "operation": None,    "status": "pending"},
-        ],
-        "B": [
-            {"action": "Open Switch S2",                   "switch": "SW2", "operation": "open",  "status": "recommended"},
-            {"action": "Close Tie Switch T4",              "switch": "SW3", "operation": "close", "status": "recommended"},
-            {"action": "Restore Bhira via alternate path", "switch": None,  "operation": None,    "status": "pending"},
-        ],
-        "C": [
-            {"action": "Open Tie Switch T4 (isolate Section C)", "switch": "SW3", "operation": "open", "status": "recommended"},
-            {"action": "Restore Bhira once fault cleared",        "switch": None,  "operation": None,   "status": "pending"},
-        ],
-    }
+    if fault_section not in section_order:
+        return []
 
-    return plans.get(fault_section, [])
+    fault_idx = section_order.index(fault_section)
+    downstream_sections: list[str] = section_order[fault_idx + 1:]
+
+    steps: list[dict] = []
+
+    # ── Step 1: Open tail switch of fault section ──────────────────────────
+    isolation_sw = _get_tail_switch_of_section(fault_section)
+    if isolation_sw:
+        label = _GRAPH.nodes[isolation_sw].get("label", isolation_sw)
+        steps.append({
+            "action":    f"Open {label}",
+            "switch":    isolation_sw,
+            "operation": "open",
+            "status":    "recommended",
+        })
+
+    # ── Step 2: Close tie switch in deepest downstream section ─────────────
+    if downstream_sections:
+        deepest = downstream_sections[-1]
+        tie_sw = _get_tail_switch_of_section(deepest)
+        if tie_sw:
+            tie_label = _GRAPH.nodes[tie_sw].get("label", tie_sw)
+
+            # Collect all villages across every downstream section
+            restored_villages: list[str] = []
+            for sec in downstream_sections:
+                for nid in get_section_nodes(sec):
+                    if _GRAPH.nodes[nid].get("node_type") == "village":
+                        restored_villages.append(
+                            _GRAPH.nodes[nid].get("label", nid)
+                        )
+
+            steps.append({
+                "action":    f"Close {tie_label}",
+                "switch":    tie_sw,
+                "operation": "close",
+                "status":    "recommended",
+            })
+
+            if restored_villages:
+                steps.append({
+                    "action":    f"Restore {', '.join(restored_villages)} via alternate path",
+                    "switch":    None,
+                    "operation": None,
+                    "status":    "pending",
+                })
+
+    # ── Step 3: Pending steps for fault-section villages (need repair) ─────
+    fault_villages: list[str] = [
+        _GRAPH.nodes[nid].get("label", nid)
+        for nid in get_section_nodes(fault_section)
+        if _GRAPH.nodes[nid].get("node_type") == "village"
+    ]
+    for village in fault_villages:
+        steps.append({
+            "action":    f"Restore {village} once fault cleared",
+            "switch":    None,
+            "operation": None,
+            "status":    "pending",
+        })
+
+    return steps
+
 
 
 def get_transformer_for_section(section: str) -> Optional[str]:

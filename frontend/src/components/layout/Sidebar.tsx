@@ -1,4 +1,6 @@
 // Sidebar — SCADA-grade navigation rail with technical line icons
+// Desktop: fixed 52px left rail (unchanged)
+// Mobile (<768px): fixed bottom navigation bar
 import { useGrid } from '../../context/GridContext';
 import type { GridState } from '../../context/GridContext';
 
@@ -59,54 +61,120 @@ export function Sidebar() {
   const { state, setView } = useGrid();
 
   return (
-    <nav
-      className="fixed left-0 top-0 h-full w-[52px] flex flex-col items-center py-2 z-40 select-none"
-      style={{
-        backgroundColor: '#0d1117',
-        borderRight: '1px solid var(--gs-border)',
-      }}
-      aria-label="Main navigation"
-    >
-      {/* SCADA Grid Mark */}
-      <div
-        className="mb-4 flex items-center justify-center w-8 h-8 rounded border"
+    <>
+      {/* ── Desktop: left rail (unchanged) ── */}
+      <nav
+        className="gs-sidebar-desktop fixed left-0 top-0 h-full w-[52px] flex flex-col items-center py-2 z-40 select-none"
         style={{
-          color: 'var(--gs-text)',
-          borderColor: 'var(--gs-border)',
-          backgroundColor: 'var(--gs-surface)',
+          backgroundColor: '#0d1117',
+          borderRight: '1px solid var(--gs-border)',
         }}
-        title="GridSense Dispatch Console"
+        aria-label="Main navigation"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-          <path d="M8 1v14M1 8h14M3.5 3.5l9 9M12.5 3.5l-9 9" />
-        </svg>
-      </div>
+        {/* SCADA Grid Mark */}
+        <div
+          className="mb-4 flex items-center justify-center w-8 h-8 rounded border"
+          style={{
+            color: 'var(--gs-text)',
+            borderColor: 'var(--gs-border)',
+            backgroundColor: 'var(--gs-surface)',
+          }}
+          title="GridSense Dispatch Console"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <path d="M8 1v14M1 8h14M3.5 3.5l9 9M12.5 3.5l-9 9" />
+          </svg>
+        </div>
 
-      {/* Nav items */}
-      <div className="flex flex-col gap-1 w-full px-1">
+        {/* Nav items */}
+        <div className="flex flex-col gap-1 w-full px-1">
+          {navItems.map((item) => {
+            const isActive = state.activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setView(item.id)}
+                className="relative flex flex-col items-center justify-center w-full py-2.5 transition-colors duration-100 group"
+                style={{
+                  color: isActive ? 'var(--gs-text)' : 'var(--gs-text-tertiary)',
+                  backgroundColor: isActive ? 'var(--gs-surface-2)' : 'transparent',
+                  borderLeft: isActive ? '2px solid var(--gs-text)' : '2px solid transparent',
+                  borderRadius: '0px 2px 2px 0px',
+                  cursor: 'pointer',
+                }}
+                aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <div className={isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}>
+                  {item.icon}
+                </div>
+                <span
+                  className="text-[9px] font-mono tracking-tight mt-1 leading-none uppercase"
+                  style={{
+                    color: isActive ? 'var(--gs-text)' : 'var(--gs-text-tertiary)',
+                    fontWeight: isActive ? 600 : 400,
+                  }}
+                >
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ── Mobile: bottom navigation bar ── */}
+      <nav
+        className="gs-sidebar-mobile"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 52,
+          display: 'none', // shown via CSS media query
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          zIndex: 40,
+          backgroundColor: '#0d1117',
+          borderTop: '1px solid var(--gs-border)',
+        }}
+        aria-label="Main navigation"
+      >
         {navItems.map((item) => {
           const isActive = state.activeView === item.id;
           return (
             <button
-              key={item.id}
+              key={`mob-${item.id}`}
               onClick={() => setView(item.id)}
-              className="relative flex flex-col items-center justify-center w-full py-2.5 transition-colors duration-100 group"
               style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
                 color: isActive ? 'var(--gs-text)' : 'var(--gs-text-tertiary)',
                 backgroundColor: isActive ? 'var(--gs-surface-2)' : 'transparent',
-                borderLeft: isActive ? '2px solid var(--gs-text)' : '2px solid transparent',
-                borderRadius: '0px 2px 2px 0px',
+                borderTop: isActive ? '2px solid var(--gs-text)' : '2px solid transparent',
                 cursor: 'pointer',
+                border: 'none',
+                outline: 'none',
+                padding: '4px 0',
+                minHeight: 44,
               }}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
             >
-              <div className={isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}>
+              <div style={{ opacity: isActive ? 1 : 0.7 }}>
                 {item.icon}
               </div>
               <span
-                className="text-[9px] font-mono tracking-tight mt-1 leading-none uppercase"
                 style={{
+                  fontSize: 9,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
                   color: isActive ? 'var(--gs-text)' : 'var(--gs-text-tertiary)',
                   fontWeight: isActive ? 600 : 400,
                 }}
@@ -116,8 +184,7 @@ export function Sidebar() {
             </button>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }
-

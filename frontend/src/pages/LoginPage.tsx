@@ -80,7 +80,7 @@ const STATUS_ITEMS = [
 // Login Page
 // ---------------------------------------------------------------------------
 export function LoginPage() {
-  const { isAuthenticated, isLoading: authLoading, login, error, clearError } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, login, error, clearError, role } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -101,9 +101,10 @@ export function LoginPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email, password]);
 
-  // Redirect authenticated users away from login
+  // Redirect authenticated users away from login — role-based
   if (!authLoading && isAuthenticated) {
-    return <Navigate to="/overview" replace />;
+    const destination = role === 'FIELD_CREW' ? '/crew' : '/overview';
+    return <Navigate to={destination} replace />;
   }
 
   // Show minimal splash while session restore is in progress

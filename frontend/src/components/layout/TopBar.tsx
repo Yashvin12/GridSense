@@ -1,6 +1,7 @@
 // TopBar — SCADA system operational header
-// Quiet status bar: active fault location, live indicator, clock.
-// Auth: user role badge + logout action added to right cluster.
+// Desktop: full status bar — fault, live indicator, clock, user, logout
+// Mobile: compact — brand + fault + logout; secondary info collapses
+// Auth: user role badge + logout action.
 
 import { useGrid } from '../../context/GridContext';
 import { StatusDot } from '../shared/StatusDot';
@@ -43,8 +44,9 @@ export function TopBar() {
 
   return (
     <header
-      className="fixed top-0 left-[52px] right-0 h-9 flex items-center justify-between px-3 z-30 select-none"
+      className="fixed top-0 right-0 h-9 flex items-center justify-between px-3 z-30 select-none gs-topbar"
       style={{
+        left: 52, // desktop: offset for sidebar
         backgroundColor: '#0d1117',
         borderBottom: '1px solid var(--gs-border)',
       }}
@@ -60,42 +62,45 @@ export function TopBar() {
         </span>
       </div>
 
-      {/* Right: Active fault + Live + Clock + User + Logout */}
-      <div className="flex items-center gap-4 text-[11px]">
+      {/* Right: fault + live + clock + user + logout */}
+      <div className="flex items-center gap-3 text-[11px]">
 
-        {/* Active fault — inline, no decorative box */}
+        {/* Active fault indicator — always visible */}
         <div className="flex items-center gap-1.5">
           <StatusDot status="affected" size="sm" pulse />
           <span className="font-mono text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
-            Active fault
+            <span className="gs-topbar-hide-mobile">Active fault </span>
           </span>
           <span className="font-mono text-[10px] font-semibold" style={{ color: 'var(--gs-red)' }}>
             {state.fault.section}
           </span>
         </div>
 
-        <span style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
+        {/* Separator — hide on mobile */}
+        <span className="gs-topbar-hide-mobile" style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
 
-        {/* Live indicator */}
-        <div className="flex items-center gap-1.5">
+        {/* Live indicator — hide on mobile */}
+        <div className="gs-topbar-hide-mobile flex items-center gap-1.5">
           <StatusDot status="powered" size="sm" />
           <span className="font-mono text-[10px]" style={{ color: 'var(--gs-text-tertiary)' }}>
             Live
           </span>
         </div>
 
-        <span style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
+        {/* Separator — hide on mobile */}
+        <span className="gs-topbar-hide-mobile" style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
 
-        {/* Real-time system clock */}
-        <div className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--gs-text-secondary)' }}>
+        {/* Real-time system clock — hide on mobile */}
+        <div className="gs-topbar-hide-mobile font-mono text-[11px] tabular-nums" style={{ color: 'var(--gs-text-secondary)' }}>
           {formattedTime} UTC
         </div>
 
-        <span style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
+        {/* Separator — hide on mobile */}
+        <span className="gs-topbar-hide-mobile" style={{ color: 'var(--gs-border)', fontSize: 10 }}>|</span>
 
-        {/* User role badge */}
+        {/* User role badge — hide on mobile */}
         {user && (
-          <div className="flex items-center gap-2">
+          <div className="gs-topbar-hide-mobile flex items-center gap-2">
             <span
               className="font-mono text-[10px]"
               style={{ color: 'var(--gs-text-tertiary)' }}
@@ -121,7 +126,7 @@ export function TopBar() {
           </div>
         )}
 
-        {/* Logout button */}
+        {/* Logout button — always visible */}
         <button
           id="gs-topbar-logout"
           type="button"

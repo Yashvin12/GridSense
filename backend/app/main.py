@@ -38,6 +38,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .engine_instance import get_engine, reset_engine
 from .services.bayesian.models import Evidence
 from .data_gen import store              # static scenario data (evidence log, telemetry, topology)
+from .feeder_graph import get_switch_isolation_plan
 from .schemas import (
     FaultData, CauseEntry, SectionProbability, TelemetryPoint,
     CrewStop, SwitchingStep, EvidenceEvent, BeliefSnapshot,
@@ -182,7 +183,19 @@ def get_crew_plan():
 
 @app.get("/api/switching-plan", response_model=List[SwitchingStep])
 def get_switching_plan():
-    return store.switching_plan
+    """
+    Dynamic switching plan derived from the live Bayesian engine.
+
+    """
+    state = get_engine().get_state()
+    raw_steps = get_switch_isolation_plan(state.most_probable_section)
+    if not raw_steps:
+        # Graph traversal returned nothing (unknown section) — fall back to store
+        return store.switching_plan
+    return [
+        SwitchingStep(action=step["action"], status=step["status"])
+        for step in raw_steps
+    ]
 
 
 @app.get("/api/eta", response_model=float)

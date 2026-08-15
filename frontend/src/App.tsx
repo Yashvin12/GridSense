@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { useEffect } from 'react';
 
 import { AuthProvider } from './auth/AuthContext';
+import { useAuth } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 
@@ -17,6 +18,16 @@ import { DashboardView } from './views/DashboardView';
 import { EvidenceView } from './views/EvidenceView';
 import { CrewView } from './views/CrewView';
 import { CauseView } from './views/CauseView';
+
+// ---------------------------------------------------------------------------
+// Role-based default redirect — reads role from auth context
+// FIELD_CREW → /crew | all others → /overview
+// ---------------------------------------------------------------------------
+function RoleRedirect() {
+  const { role } = useAuth();
+  const destination = role === 'FIELD_CREW' ? '/crew' : '/overview';
+  return <Navigate to={destination} replace />;
+}
 
 // ---------------------------------------------------------------------------
 // URL → activeView sync
@@ -67,11 +78,11 @@ function ViewRouter() {
   };
 
   return (
-    <div className="h-screen" style={{ backgroundColor: 'var(--gs-bg)' }}>
+    <div className="h-screen gs-app-root" style={{ backgroundColor: 'var(--gs-bg)' }}>
       <Sidebar />
       <TopBar />
       <main
-        className="h-screen"
+        className="h-screen gs-main-content"
         style={{
           marginLeft: 52,
           paddingTop: 36,
@@ -115,10 +126,9 @@ export default function App() {
             <Route path="/evidence"  element={<AppShell />} />
             <Route path="/crew"      element={<AppShell />} />
             <Route path="/causes"    element={<AppShell />} />
-            {/* Default: redirect / → /overview */}
-            <Route path="/"          element={<Navigate to="/overview" replace />} />
-            {/* Catch-all */}
-            <Route path="*"          element={<Navigate to="/overview" replace />} />
+            {/* Default / catch-all: role-based redirect */}
+            <Route path="/"          element={<RoleRedirect />} />
+            <Route path="*"          element={<RoleRedirect />} />
           </Route>
         </Routes>
       </AuthProvider>

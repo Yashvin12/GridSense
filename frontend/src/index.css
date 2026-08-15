@@ -245,3 +245,138 @@ html, body, #root {
 .gs-forgot-btn:hover {
   color: var(--gs-text-secondary) !important;
 }
+
+/* ------------------------------------------------------------------ */
+/* Mobile-first responsive layout                                      */
+/* ------------------------------------------------------------------ */
+
+/* Desktop defaults (>= 768px): sidebar is left rail, topbar left=52px */
+.gs-sidebar-desktop { display: flex !important; }
+.gs-sidebar-mobile  { display: none  !important; }
+.gs-topbar          { left: 52px !important; }
+.gs-main-content    {
+  margin-left: 52px !important;
+  padding-bottom: 0 !important;
+}
+
+/* On mobile (< 768px): bottom nav, no left offset */
+@media (max-width: 767px) {
+  .gs-sidebar-desktop { display: none  !important; }
+  .gs-sidebar-mobile  { display: flex  !important; }
+  .gs-topbar          { left: 0 !important; }
+
+  .gs-main-content {
+    margin-left: 0 !important;
+    padding-bottom: 52px !important; /* clear bottom nav */
+  }
+
+  /* Topbar secondary content — collapse on mobile */
+  .gs-topbar-hide-mobile {
+    display: none !important;
+  }
+
+  /* Allow crew page to scroll on mobile */
+  .gs-app-root {
+    overflow-y: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Crew page responsive layout                                         */
+/* ------------------------------------------------------------------ */
+
+/* Desktop: side-by-side panels */
+.gs-crew-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+}
+
+.gs-crew-left {
+  flex: 1 1 52%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.gs-crew-right {
+  flex: 1 1 48%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gs-crew-belief {
+  flex: 1 1 50%;
+  min-height: 0;
+}
+
+.gs-crew-map {
+  flex: 1 1 50%;
+  min-height: 0;
+}
+
+/* Mobile: single column, deliberate order */
+@media (max-width: 767px) {
+  .gs-crew-layout {
+    flex-direction: column;
+    height: auto;
+    overflow-y: auto;
+    padding-bottom: 8px;
+  }
+
+  .gs-crew-left {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .gs-crew-right {
+    flex: none;
+    flex-direction: column;
+    order: 2;
+  }
+
+  .gs-crew-map {
+    min-height: 220px;
+    max-height: 260px;
+    order: 1;
+  }
+
+  .gs-crew-belief {
+    min-height: 240px;
+    order: 2;
+  }
+
+  /* Crew page: allow vertical scroll, no fixed height */
+  .gs-app-root .h-screen.gs-main-content {
+    height: auto !important;
+    overflow-y: auto;
+  }
+
+  /* Full-width panels on mobile */
+  .gs-crew-left .gs-panel,
+  .gs-crew-right .gs-panel {
+    border-radius: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Touch-friendly targets on mobile                                    */
+/* ------------------------------------------------------------------ */
+@media (max-width: 767px) {
+  .gs-crew-btn {
+    min-height: 48px !important;
+    font-size: 13px !important;
+  }
+
+  .gs-crew-confirm-btn {
+    min-height: 52px !important;
+    font-size: 13px !important;
+  }
+}
+
