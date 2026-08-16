@@ -51,4 +51,26 @@ export const api = {
     }
     return res.json();
   },
+
+  /**
+   * Submit a new piece of streaming evidence to the Bayesian engine.
+   * Returns the updated section posteriors, causes, fault, and evidence_count.
+   */
+  submitEvidence: async (payload: {
+    evidence_type: string;
+    strength?: number;
+    section_id?: string | null;
+    location?: string | null;
+    metadata?: Record<string, unknown>;
+  }) => {
+    const res = await fetch(`${BASE_URL}/api/evidence/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      throw new Error(`POST /api/evidence/update failed: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  },
 };

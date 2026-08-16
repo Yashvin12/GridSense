@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Dict, Optional, Literal
+from typing import List, Dict, Optional, Literal, Any
 
 
 class FaultData(BaseModel):
@@ -81,3 +81,16 @@ class FeederEdge(BaseModel):
 class CrewConfirmRequest(BaseModel):
     stop: str
     found: bool
+
+
+class EvidenceUpdateRequest(BaseModel):
+    """Payload for POST /api/evidence/update.
+
+    Feeds a new piece of streaming evidence directly into the Bayesian engine
+    and returns the updated posteriors.
+    """
+    evidence_type: str
+    strength: float = 1.0
+    section_id: Optional[str] = None
+    location: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)

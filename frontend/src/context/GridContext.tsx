@@ -6,9 +6,11 @@
 //
 // On mount: fetches all state from the backend (fault, sections, causes,
 //           evidence, belief-history, telemetry, crew-plan, feeder topology).
-// Live:     telemetry updates every 2s via GET /api/telemetry poll.
+// Live:     telemetry updates every 3s via GET /api/telemetry poll.
 // Actions:  confirmStop / denyStop POST to /api/crew/confirm and update state
 //           from the API response (real Bayesian posteriors -- Learning Loop).
+//           submitEvidence POSTs to /api/evidence/update -- injects streaming
+//           evidence and refreshes posteriors.
 // ---------------------------------------------------------------------------
 
 import {
@@ -200,6 +202,14 @@ interface GridContextValue {
   confirmStop: (stopName: string) => void;
   denyStop: (stopName: string) => void;
   setView: (view: GridState['activeView']) => void;
+  /** Submit streaming evidence to the Bayesian engine; updates global state. */
+  submitEvidence: (payload: {
+    evidence_type: string;
+    strength?: number;
+    section_id?: string | null;
+    location?: string | null;
+    metadata?: Record<string, unknown>;
+  }) => Promise<void>;
 }
 
 const GridContext = createContext<GridContextValue | null>(null);
@@ -389,8 +399,53 @@ export function GridProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_VIEW', view });
   }, []);
 
+  // ── Evidence update (Learning Loop — streaming evidence ingestion) ────────
+  const submitEvidence = useCallback(async (payload: {
+    evidence_type: string;
+    strength?: number;
+    section_id?: string | null;
+    location?: string | null;
+    metadata?: Record<string, unknown>;
+  }) => {
+    if (USE_MOCK || !state.backendConnected) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/evidence/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return;
+      const data = await res.json() as {
+        sections: SectionProbability[];
+        causes: CauseEntry[];
+        fault: { section: string; confidence: number };
+        evidence_count: number;
+      };
+
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+      dispatch({
+        type: 'SET_ALL',
+        payload: {
+          sectionProbabilities: data.sections.map((s) => ({
+            ...s,
+            color: getSectionColor(s.probability),
+          })),
+          causes: data.causes,
+          fault: { section: data.fault.section, confidence: data.fault.confidence },
+          evidenceCount: data.evidence_count,
+          lastBeliefUpdate: timeStr,
+        },
+      });
+    } catch (err) {
+      console.warn('[GridContext] submitEvidence POST failed:', err);
+    }
+  }, [state.backendConnected]);
+
   return (
-    <GridContext.Provider value={{ state, dispatch, confirmStop, denyStop, setView }}>
+    <GridContext.Provider value={{ state, dispatch, confirmStop, denyStop, setView, submitEvidence }}>
       {children}
     </GridContext.Provider>
   );

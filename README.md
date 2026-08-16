@@ -349,7 +349,7 @@ All timestamps — evidence log, belief history, telemetry, header — are ancho
 
 ### Next
 - [x] Wire `BayesianInferenceEngine` into FastAPI endpoints
-- [ ] Add `POST /api/evidence/update` — accepts evidence, returns updated posteriors
+- [x] Add `POST /api/evidence/update` — accepts evidence, returns updated posteriors
 
 
 ---

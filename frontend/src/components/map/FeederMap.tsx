@@ -37,7 +37,7 @@ interface EvidenceMarker {
 const EVIDENCE_POSITIONS: Record<string, [number, number]> = {
   'e1': [18.5120, 73.4680],   // Overcurrent Relay — Mulshi Substation
   'e2': [18.4980, 73.4890],   // Last-gasp signals — Kolvan (V_B)
-  'e3': [18.4900, 73.5010],   // Last-gasp signals — Bhira (V_C)
+  'e3': [18.4855, 73.4860],   // Last-gasp signals — Bhira (V_C)
   'e4': [18.4993, 73.4870],   // Voltage Collapse — DTR-2 (T2)
   'e5': [18.4983, 73.4883],   // High Wind — Pole 43–46 corridor (midpoint)
   'e6': [18.4980, 73.4895],   // Consumer Complaints — Kolvan (offset)

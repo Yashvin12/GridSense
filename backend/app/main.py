@@ -23,6 +23,7 @@ GET  /api/eta                 Estimated restoration time (minutes)
 GET  /api/feeder/nodes        Feeder topology nodes (for map)
 GET  /api/feeder/edges        Feeder topology edges (for map)
 GET  /api/engine/state        Full engine state dump (debug / judges)
+POST /api/evidence/update     Ingest streaming evidence — returns updated posteriors
 POST /api/crew/confirm        Crew confirms or denies fault — updates posteriors
 POST /api/engine/reset        Reset engine to uniform prior + replay CSV
 """
@@ -42,7 +43,7 @@ from .feeder_graph import get_switch_isolation_plan
 from .schemas import (
     FaultData, CauseEntry, SectionProbability, TelemetryPoint,
     CrewStop, SwitchingStep, EvidenceEvent, BeliefSnapshot,
-    FeederNode, FeederEdge, CrewConfirmRequest,
+    FeederNode, FeederEdge, CrewConfirmRequest, EvidenceUpdateRequest,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -276,6 +277,72 @@ def confirm_crew_stop(payload: CrewConfirmRequest):
     state = engine.get_state()
     return {
         "crew_plan": store.crew_plan,
+        "sections": [
+            {
+                "section": sec,
+                "probability": round(prob, 4),
+                "color": _prob_color(prob),
+            }
+            for sec, prob in state.section_probabilities.items()
+        ],
+        "causes": sorted(
+            [
+                {
+                    "label": _CAUSE_LABELS.get(c, c.replace("_", " ").title()),
+                    "probability": round(p, 4),
+                }
+                for c, p in state.cause_probabilities.items()
+            ],
+            key=lambda x: x["probability"],
+            reverse=True,
+        ),
+        "fault": {
+            "section": state.most_probable_section,
+            "confidence": round(state.confidence, 4),
+        },
+        "evidence_count": state.evidence_count,
+    }
+
+
+# ===========================================================================
+# Evidence update — Streaming evidence ingestion
+# Accepts any valid Evidence type, updates the live Bayesian engine,
+# and returns the new posteriors immediately.
+# ===========================================================================
+
+@app.post("/api/evidence/update")
+def update_evidence(payload: EvidenceUpdateRequest):
+    """
+    POST /api/evidence/update
+
+    Accepts a new piece of streaming evidence and feeds it directly into the
+    live BayesianInferenceEngine.  Returns the updated section posteriors,
+    cause distribution, fault summary, and evidence count so the frontend
+    can re-render without a full page reload.
+
+    Accepted evidence_type values (non-exhaustive):
+      RELAY_TRIP, METER_OUTAGE_CLUSTER, VOLTAGE_COLLAPSE,
+      HIGH_WIND, CONSUMER_COMPLAINT, TRANSFORMER_TEMP_SPIKE,
+      CURRENT_ANOMALY, CREW_CONFIRMED, CREW_NO_FAULT
+    """
+    try:
+        evidence = Evidence(
+            evidence_type=payload.evidence_type,
+            strength=float(payload.strength),
+            section_id=payload.section_id,
+            location=payload.location,
+            metadata=payload.metadata,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    engine = get_engine()
+    engine.update(evidence)
+    state = engine.get_state()
+
+    return {
+        "accepted": True,
+        "evidence_type": payload.evidence_type,
         "sections": [
             {
                 "section": sec,

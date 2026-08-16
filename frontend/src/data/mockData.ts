@@ -143,7 +143,7 @@ export const feederNodes: FeederNode[] = [
   // Villages
   { id: 'V_A', type: 'village', label: 'Tamhini', lat: 18.5060, lng: 73.4780, section: 'A', powered: true },
   { id: 'V_B', type: 'village', label: 'Kolvan', lat: 18.4980, lng: 73.4890, section: 'B', powered: false },
-  { id: 'V_C', type: 'village', label: 'Bhira', lat: 18.4900, lng: 73.5010, section: 'C', powered: false },
+  { id: 'V_C', type: 'village', label: 'Bhira', lat: 18.4855, lng: 73.4860, section: 'C', powered: false },
 ];
 
 export const feederEdges: FeederEdge[] = [
