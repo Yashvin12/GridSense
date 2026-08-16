@@ -39,18 +39,6 @@ const sourceTypeStyle: Record<string, { label: string; color: string }> = {
   complaint: { label: 'COMPLAINT', color: 'rgba(248,81,73,0.7)'     },
 };
 
-// Trigger label → belief snapshot trigger key mapping
-// Evidence timestamps are matched to beliefHistory triggers in order
-const EVIDENCE_TRIGGER_ORDER = [
-  'Relay trip',
-  'Last-gasp signals',
-  'Voltage collapse',
-  'Wind alert',
-  'Complaints',
-  'Temp spike',
-  'Current zero',
-];
-
 export function EvidenceLog({ compact = false }: { compact?: boolean }) {
   const { state } = useGrid();
   const { evidenceLog, evidenceCount, beliefHistory } = state;
@@ -59,17 +47,28 @@ export function EvidenceLog({ compact = false }: { compact?: boolean }) {
   // The latest event is always index 0 (newest first)
   const latestId = items[0]?.id;
 
-  // Build before→after belief map for Section B using beliefHistory snapshots
-  // evidenceLog is newest-first; beliefHistory is oldest-first
-  // We match belief snapshots by index: snapshot[0] = uniform prior, snapshot[1] = after event 1, etc.
-  // Evidence items are in reverse order, so we correlate by trigger order
+  // Build before→after belief map for Section B using beliefHistory snapshots.
+  //
+  // SINGLE SOURCE OF TRUTH: beliefHistory (oldest-first) is the same array
+  // that drives the Belief Evolution chart. Each entry has a `trigger` string.
+  //
+  // We key the delta map by that trigger string directly — no reverse-index
+  // arithmetic on evidenceLog. This means adding crew events or re-ordering
+  // evidenceLog never corrupts the mapping.
+  //
+  // beliefHistory layout:
+  //   [0] Uniform prior  (no preceding evidence)
+  //   [1] posterior after snapshot[1].trigger evidence
+  //   [2] posterior after snapshot[2].trigger evidence
+  //   …
+  // So: delta for snapshot[i] = { before: snapshot[i-1], after: snapshot[i] }
   const beliefDeltas: Map<string, { before: number; after: number; delta: number }> = new Map();
   if (!compact && beliefHistory.length > 1) {
-    // Build deltas for each evidence trigger
-    EVIDENCE_TRIGGER_ORDER.forEach((triggerKey, triggerIdx) => {
-      const snapshotBefore = beliefHistory[triggerIdx];       // belief before this evidence
-      const snapshotAfter  = beliefHistory[triggerIdx + 1];  // belief after this evidence
-      if (snapshotBefore && snapshotAfter) {
+    for (let i = 1; i < beliefHistory.length; i++) {
+      const snapshotBefore = beliefHistory[i - 1];
+      const snapshotAfter  = beliefHistory[i];
+      const triggerKey = snapshotAfter.trigger;
+      if (triggerKey && snapshotBefore && snapshotAfter) {
         const before = snapshotBefore.sections['B'] ?? 0;
         const after  = snapshotAfter.sections['B'] ?? 0;
         beliefDeltas.set(triggerKey, {
@@ -78,7 +77,7 @@ export function EvidenceLog({ compact = false }: { compact?: boolean }) {
           delta:  Math.round((after - before) * 100),
         });
       }
-    });
+    }
   }
 
   return (
@@ -261,10 +260,36 @@ export function EvidenceLog({ compact = false }: { compact?: boolean }) {
 
                   {/* Row 4: MODEL EFFECT — full mode shows structured before→after belief update */}
                   {!compact && (() => {
-                    // Match this evidence item to a trigger in beliefHistory by order
-                    // evidenceLog is newest-first; we need to find its reverse index
-                    const reverseIdx = items.length - 1 - i;
-                    const triggerKey = EVIDENCE_TRIGGER_ORDER[reverseIdx];
+                    // Match this evidence event to its beliefHistory snapshot by trigger string.
+                    // We search beliefHistory for the snapshot whose trigger matches this event
+                    // title (approximate match) or — for events whose title maps to a known
+                    // trigger key — use a lookup table.
+                    //
+                    // The beliefDelta map is already keyed by the exact trigger strings from
+                    // beliefHistory (e.g. 'Relay trip', 'Last-gasp signals', …). We find the
+                    // matching key by checking if any key is a case-insensitive substring of
+                    // the event title, or if the event title contains the key.
+                    const triggerKey = (() => {
+                      const title = event.title.toLowerCase();
+                      for (const key of beliefDeltas.keys()) {
+                        if (title.includes(key.toLowerCase()) || key.toLowerCase().includes(title)) {
+                          return key;
+                        }
+                      }
+                      // Fallback: check a curated title→trigger map for events whose
+                      // titles don't share enough words with the trigger label.
+                      const TITLE_TO_TRIGGER: Record<string, string> = {
+                        'overcurrent relay tripped': 'Relay trip',
+                        'last-gasp signals':         'Last-gasp signals',
+                        'voltage collapse':           'Voltage collapse',
+                        'high wind detected':        'Wind alert',
+                        'consumer complaints':       'Complaints',
+                        'transformer temperature spike': 'Temp spike',
+                        'current near zero':         'Current near zero',
+                        'current zero':              'Current zero',
+                      };
+                      return TITLE_TO_TRIGGER[title] ?? undefined;
+                    })();
                     const delta = triggerKey ? beliefDeltas.get(triggerKey) : undefined;
 
                     if (delta && delta.delta !== 0) {

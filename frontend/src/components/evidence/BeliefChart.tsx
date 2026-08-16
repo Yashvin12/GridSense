@@ -1,6 +1,15 @@
 // BeliefChart — posterior probability over time, Bayesian update visualization
 // Redesigned: evidence event markers, endpoint annotation, line hierarchy, subtle grid
 // Story: EVIDENCE ARRIVES → BELIEF CHANGES → FAULT PROBABILITY CONVERGES
+//
+// DATA ARCHITECTURE (single source of truth):
+//   beliefHistory (BeliefSnapshot[]) — oldest-first array from GridContext
+//   Each snapshot: { timestamp, sections: {A,B,C}, trigger? }
+//   Chart data points are indexed 0…N-1 (numeric).
+//   XAxis uses this numeric index so each snapshot maps to a unique, unambiguous
+//   x-coordinate — no string-collision risk when multiple snapshots share the same
+//   HH:MM prefix.  The tooltip reads A/B/C values from the hovered data point,
+//   which are derived directly from the corresponding BeliefSnapshot.
 
 import { useRef, useCallback } from 'react';
 import {
@@ -34,21 +43,45 @@ const TRIGGER_LABELS: Record<string, string> = {
   'Complaints':        'Consumer complaint cluster — Section B',
   'Temp spike':        'Transformer temperature spike',
   'Current near zero': 'Phase current near zero — Section B',
+  'Current zero':      'Phase current near zero — Section B',
 };
+
+// ---- Chart data point type ----------------------------------------
+// Each point corresponds to exactly one BeliefSnapshot entry.
+// `x` is the numeric snapshot index (0, 1, 2, …) — used as the XAxis
+// dataKey so that no two points ever share the same x-coordinate, even
+// when their wall-clock timestamps are close together.
+interface ChartPoint {
+  x: number;        // snapshot index — unambiguous x-coordinate
+  time: string;     // HH:MM:SS — used for display only (ticks, tooltip label)
+  A: number;        // posterior × 100
+  B: number;
+  C: number;
+  trigger: string;  // trigger label from BeliefSnapshot
+}
 
 // ---- Custom tooltip --------------------------------------------------
 function BeliefTooltip({
   active,
   payload,
-  label,
+  chartData,
 }: {
   active?: boolean;
-  payload?: Array<{ value: number; dataKey: string; payload?: Record<string, unknown> }>;
-  label?: string;
+  payload?: Array<{ value: number; dataKey: string; payload?: ChartPoint }>;
+  label?: number;   // numeric x-index; we read metadata from payload instead
+  chartData: ChartPoint[];
 }) {
   if (!active || !payload || payload.length === 0) return null;
 
-  const trigger = payload[0]?.payload?.trigger as string | undefined;
+  // The payload entries all reference the same chart data point — pick the first.
+  const point = payload[0]?.payload as ChartPoint | undefined;
+  if (!point) return null;
+
+  // Derive the full timestamp from chartData by index (belt-and-suspenders)
+  const snap = chartData[point.x];
+  const timeLabel = snap?.time ?? point.time;
+
+  const trigger = point.trigger;
   const humanLabel = trigger ? (TRIGGER_LABELS[trigger] || trigger) : null;
 
   // Order: B first (primary), then A, then C
@@ -78,7 +111,7 @@ function BeliefTooltip({
           letterSpacing: '0.02em',
         }}
       >
-        {label}
+        {timeLabel}
       </div>
 
       {/* Evidence received */}
@@ -102,7 +135,8 @@ function BeliefTooltip({
       {/* Divider */}
       <div style={{ height: 1, backgroundColor: 'rgba(48,54,61,0.6)', marginBottom: 6 }} />
 
-      {/* Section posteriors */}
+      {/* Section posteriors — values come directly from the hovered chart point,
+          which is derived from the corresponding BeliefSnapshot in beliefHistory */}
       {ordered.map((entry) => {
         const isPrimary = entry.dataKey === 'B';
         const col =
@@ -264,13 +298,22 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
 
   const topSection = [...sectionProbabilities].sort((a, b) => b.probability - a.probability)[0];
 
-  // Transform belief history — extract HH:MM:SS from ISO string
-  const data = beliefHistory.map((snapshot) => {
+  // Transform belief history into chart data points.
+  //
+  // KEY DESIGN DECISION: `x` is a numeric snapshot index (0, 1, 2, …), NOT a
+  // timestamp string.  This guarantees every data point has a unique x-coordinate
+  // in Recharts — even when two snapshots fall within the same minute or second.
+  // Without this, Recharts resolves the hovered point by matching the x-axis
+  // *string value*, causing multiple snapshots that share a "HH:MM" prefix to all
+  // map to the first matching point, showing the wrong (e.g. uniform prior)
+  // posterior in the tooltip.
+  const data: ChartPoint[] = beliefHistory.map((snapshot, i) => {
+    // Extract HH:MM:SS from ISO string for display purposes only
     let timeLabel = '';
     try {
       const match = snapshot.timestamp.match(/T(\d{2}:\d{2}:\d{2})/);
       if (match) {
-        timeLabel = match[1]; // HH:MM:SS
+        timeLabel = match[1]; // HH:MM:SS — all 8 chars, distinguishes close events
       } else {
         const d = new Date(snapshot.timestamp);
         timeLabel = d.toLocaleTimeString('en-IN', {
@@ -282,7 +325,8 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
       timeLabel = snapshot.timestamp;
     }
     return {
-      time: timeLabel,
+      x: i,                                                    // ← unique numeric key
+      time: timeLabel,                                         // ← display only
       A: Number((snapshot.sections.A * 100).toFixed(1)),
       B: Number((snapshot.sections.B * 100).toFixed(1)),
       C: Number((snapshot.sections.C * 100).toFixed(1)),
@@ -297,21 +341,27 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
     .map((d, i) => (i > 0 && d.trigger ? i : -1))
     .filter((i) => i >= 0);
 
-  // Custom X tick — show HH:MM (omit seconds to save space)
+  // Custom X tick — show HH:MM:SS label for the snapshot at this numeric index.
+  // We show all 8 chars so e.g. 14:22:15 and 14:22:20 are visually distinct.
+  // On a compact chart there are few data points so this never crowds the axis.
   const renderTick = useCallback(
-    ({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => (
-      <text
-        x={x}
-        y={y + 10}
-        textAnchor="middle"
-        fill="#6e7681"
-        fontSize={9}
-        fontFamily="IBM Plex Mono, monospace"
-      >
-        {String(payload.value).slice(0, 5)}
-      </text>
-    ),
-    []
+    ({ x, y, payload }: { x: number; y: number; payload: { value: number } }) => {
+      const pt = data[payload.value];
+      return (
+        <text
+          x={x}
+          y={y + 10}
+          textAnchor="middle"
+          fill="#6e7681"
+          fontSize={9}
+          fontFamily="IBM Plex Mono, monospace"
+        >
+          {pt ? pt.time : ''}
+        </text>
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data]
   );
 
   return (
@@ -380,8 +430,17 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
               vertical={false}
             />
 
+            {/*
+              XAxis uses the numeric snapshot index as dataKey.
+              This ensures each snapshot has a unique x-coordinate regardless of
+              how close together their wall-clock timestamps are.
+              The tick renderer maps the index back to the HH:MM:SS display label.
+            */}
             <XAxis
-              dataKey="time"
+              dataKey="x"
+              type="number"
+              domain={[0, data.length - 1]}
+              ticks={data.map((_, i) => i)}
               tick={renderTick as never}
               axisLine={false}
               tickLine={false}
@@ -398,8 +457,25 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
               tickCount={5}
             />
 
+            {/*
+              Tooltip: the `payload` entries come from the hovered chart data point,
+              which is the direct 1-to-1 mapping of a BeliefSnapshot entry.
+              We pass `chartData` so the tooltip can look up the display timestamp
+              by numeric index if needed.
+            */}
             <Tooltip
-              content={<BeliefTooltip />}
+              content={(props) => {
+                type TooltipEntry = { value: number; dataKey: string; payload?: ChartPoint };
+                const payload = (props.payload ?? []) as unknown as TooltipEntry[];
+                return (
+                  <BeliefTooltip
+                    active={props.active}
+                    payload={payload}
+                    label={props.label as number}
+                    chartData={data}
+                  />
+                );
+              }}
               cursor={{
                 stroke: 'rgba(139,148,158,0.14)',
                 strokeWidth: 1,
@@ -407,7 +483,9 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
               }}
             />
 
-            {/* Evidence event vertical markers — full mode only */}
+            {/* Evidence event vertical markers — full mode only.
+                ReferenceLine x={idx} uses the numeric snapshot index, which
+                aligns exactly with the chart data point for that snapshot. */}
             {!compact &&
               annotationIndices.map((idx) => {
                 const pt = data[idx];
@@ -415,7 +493,7 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
                 return (
                   <ReferenceLine
                     key={idx}
-                    x={pt.time}
+                    x={idx}
                     stroke={COLOR.eventLine}
                     strokeWidth={1}
                     strokeDasharray="3 4"
@@ -434,7 +512,7 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
               strokeOpacity={0.55}
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0, fill: COLOR.A }}
-              animationDuration={500}
+              isAnimationActive={false}
             />
 
             {/* C — subordinate, thin, low opacity */}
@@ -446,7 +524,7 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
               strokeOpacity={0.55}
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0, fill: COLOR.C }}
-              animationDuration={500}
+              isAnimationActive={false}
             />
 
             {/* B — PRIMARY, rendered last → draws on top */}
@@ -457,7 +535,7 @@ export function BeliefChart({ compact = false }: { compact?: boolean }) {
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4, strokeWidth: 0, fill: COLOR.B }}
-              animationDuration={500}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
